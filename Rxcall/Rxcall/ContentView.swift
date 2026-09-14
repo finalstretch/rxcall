@@ -127,7 +127,7 @@ struct ContentView: View {
         var new: [PersistentIdentifier: [RecallMatch]] = [:]
         for med in medications {
             do {
-                let recalls = try await client.ongoingRecalls(mentioning: med.name)
+                let recalls = try await client.ongoingRecalls(for: med)
                 new[med.persistentModelID] = RecallMatcher.matches(for: med, in: recalls)
             } catch {
                 errorMessage = "Couldn't reach the FDA's recall service. Check your connection and try again."
@@ -148,6 +148,9 @@ private struct MedicationHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(medication.name).font(.headline).textCase(nil)
+            if let generic = medication.genericName, generic.lowercased() != medication.name.lowercased() {
+                Text(generic).font(.subheadline).textCase(nil)
+            }
             if medication.ndc != nil || medication.lotNumber != nil {
                 Text([medication.ndc.map { "NDC \($0)" }, medication.lotNumber.map { "Lot \($0)" }]
                     .compactMap { $0 }.joined(separator: " · "))

@@ -5,6 +5,9 @@ import SwiftData
 @Model
 final class Medication {
     var name: String
+    /// Generic name when the user picked a brand from the index, so recalls
+    /// listed under the ingredient are found too.
+    var genericName: String?
     /// NDC from the bottle, if the user entered one. Lets a recall be matched
     /// with certainty instead of by name.
     var ndc: String?
@@ -13,8 +16,15 @@ final class Medication {
     var lotNumber: String?
     var addedAt: Date
 
-    init(name: String, ndc: String? = nil, lotNumber: String? = nil) {
+    /// Names worth searching the recall feed for.
+    var searchTerms: [String] {
+        guard let genericName, genericName.lowercased() != name.lowercased() else { return [name] }
+        return [name, genericName]
+    }
+
+    init(name: String, genericName: String? = nil, ndc: String? = nil, lotNumber: String? = nil) {
         self.name = name
+        self.genericName = genericName
         self.ndc = ndc
         self.lotNumber = lotNumber
         self.addedAt = .now
