@@ -70,9 +70,26 @@ final class DrugIndex {
         return scored.sorted { ($0.0, $0.1) < ($1.0, $1.1) }.prefix(limit).map(\.2)
     }
 
+    /// Entries whose name starts with `word` — a partial read off the edge of a
+    /// curved label. Nothing looser: "tablet" must not suggest "Antacid Tablets".
+    func prefixMatches(for word: String, limit: Int = 2) -> [DrugEntry] {
+        let w = word.lowercased()
+        var out: [DrugEntry] = []
+        for (entry, brand, generic) in searchable {
+            let name = brand.isEmpty ? generic : brand
+            if name.hasPrefix(w), name.count > w.count {
+                out.append(entry)
+                if out.count == limit { break }
+            }
+        }
+        return out
+    }
+
     /// Drug names that appear in a block of text (e.g. lines read off a bottle).
-    /// Brand-name hits first, then ingredient hits; longer names first within
-    /// each, since "Synjardy XR" beats "Synjardy" beats "metformin".
+    /// A brand counts when the brand itself is present. A generic counts when
+    /// its ingredient is present — but only for the plain generic entry, because
+    /// seeing "metformin" is no evidence for Glumetza in particular. Brand hits
+    /// first, then longer names, so "Synjardy XR" beats "Synjardy" beats "metformin".
     func matches(inText text: String) -> [DrugEntry] {
         let haystack = " " + text.lowercased()
             .replacingOccurrences(of: #"[^a-z0-9]+"#, with: " ", options: .regularExpression) + " "
@@ -86,11 +103,18 @@ final class DrugIndex {
         for (entry, brand, _) in searchable {
             let tier: Int
             let ingredient = entry.searchTerms.last?.lowercased() ?? ""
-            if present(brand) { tier = 0 }
-            // Short ingredient names ("iron", "mouth" from a malformed record) match
-            // ordinary label words too often to be worth surfacing on their own.
-            else if ingredient.count >= 6, present(ingredient) { tier = 1 }
-            else { continue }
+            if !brand.isEmpty {
+                guard present(brand) else { continue }
+                tier = 0
+            } else {
+                // Every ingredient of a combination has to be there — "ibuprofen"
+                // alone is no evidence for "ibuprofen and famotidine". Short
+                // ingredient names ("iron", "mouth" from a malformed record) match
+                // ordinary label words too often to be worth surfacing.
+                let ingredients = entry.generic.components(separatedBy: " and ")
+                guard ingredient.count >= 6, ingredients.allSatisfy(present) else { continue }
+                tier = 1
+            }
             if seenNames.insert(entry.displayName.lowercased()).inserted {
                 found.append((tier, entry))
             }

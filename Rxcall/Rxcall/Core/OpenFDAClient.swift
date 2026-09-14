@@ -57,10 +57,10 @@ struct OpenFDAClient {
 /// Matches recalls against a medication and grades the confidence.
 enum RecallMatcher {
     static func matches(for medication: Medication, in recalls: [Recall]) -> [RecallMatch] {
-        let userNDC = medication.ndc.map(normalizeNDC)
+        let userNDCs = medication.ndc.map(candidateNDCs) ?? []
         return recalls.map { recall in
             let confidence: MatchConfidence
-            if let userNDC, recall.allNDCs.contains(userNDC) {
+            if !userNDCs.isEmpty, !recall.allNDCs.isDisjoint(with: userNDCs) {
                 confidence = .ndc
             } else {
                 confidence = .name
@@ -70,11 +70,21 @@ enum RecallMatcher {
         .sorted { ($0.confidence, $0.recall.recallInitiationDate) > ($1.confidence, $1.recall.recallInitiationDate) }
     }
 
-    /// Reduces a user-entered NDC (any of the common 10- or 11-digit layouts,
-    /// with or without a package segment) to labeler-product form.
-    static func normalizeNDC(_ raw: String) -> String {
+    /// Labeler-product forms an entered NDC could correspond to, for comparing
+    /// against openFDA's hyphenated `product_ndc`.
+    ///
+    /// Typed with hyphens ("68462-521-90") the split is known. Read from a
+    /// barcode it's ten bare digits, and the FDA allows three layouts
+    /// (4-4-2, 5-3-2, 5-4-1), so all three splits are tried.
+    static func candidateNDCs(_ raw: String) -> Set<String> {
         let parts = raw.split(separator: "-").map(String.init)
-        guard parts.count >= 2 else { return raw }
-        return "\(parts[0])-\(parts[1])"
+        if parts.count >= 2 { return ["\(parts[0])-\(parts[1])"] }
+        let d = raw.filter(\.isNumber)
+        guard d.count == 10 else { return [raw] }
+        return [
+            "\(d.prefix(4))-\(d.dropFirst(4).prefix(4))",
+            "\(d.prefix(5))-\(d.dropFirst(5).prefix(3))",
+            "\(d.prefix(5))-\(d.dropFirst(5).prefix(4))",
+        ]
     }
 }

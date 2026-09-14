@@ -9,6 +9,7 @@ struct AddMedicationView: View {
     @State private var picked: DrugEntry?
     @State private var ndc = ""
     @State private var lot = ""
+    @State private var scanning = false
 
     private var suggestions: [DrugEntry] {
         picked == nil ? DrugIndex.shared.suggestions(for: name) : []
@@ -17,6 +18,13 @@ struct AddMedicationView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    Button {
+                        scanning = true
+                    } label: {
+                        Label("Scan the label with the camera", systemImage: "camera.viewfinder")
+                    }
+                }
                 Section {
                     TextField("Medication name", text: $name)
                         .textInputAutocapitalization(.never)
@@ -59,6 +67,16 @@ struct AddMedicationView: View {
             }
             .navigationTitle("Add medication")
             .navigationBarTitleDisplayMode(.inline)
+            .sheet(isPresented: $scanning) {
+                ScanView { result in
+                    if let entry = result.entry {
+                        picked = entry
+                        name = entry.displayName
+                    }
+                    if let code = result.ndc, ndc.isEmpty { ndc = code }
+                    if let code = result.lotNumber, lot.isEmpty { lot = code }
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
