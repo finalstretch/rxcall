@@ -5,12 +5,13 @@ import SwiftData
 /// and the way to remove it.
 struct MedicationDetailView: View {
     @Bindable var medication: Medication
-    /// nil = not checked yet this session.
-    let matches: [RecallMatch]?
     let onDelete: () -> Void
 
+    @Environment(RecallStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var confirmingDelete = false
+
+    private var matches: [RecallMatch]? { store.matches(for: medication) }
 
     var body: some View {
         List {
@@ -33,7 +34,18 @@ struct MedicationDetailView: View {
                 Text("With the NDC, Rx-call can tell you a recall definitely covers your bottle. The lot number is shown next to each recall's lot list so you can compare.")
             }
 
-            Section("Recalls") {
+            Section {
+                Button {
+                    Task { await store.check(medication) }
+                } label: {
+                    HStack {
+                        Label(matches == nil ? "Check for recalls" : "Check again", systemImage: "arrow.clockwise")
+                        Spacer()
+                        if store.isChecking(medication) { ProgressView() }
+                    }
+                }
+                .disabled(store.isChecking(medication))
+
                 if let matches {
                     if matches.isEmpty {
                         Label("No ongoing recalls found", systemImage: "checkmark.circle")
@@ -45,9 +57,15 @@ struct MedicationDetailView: View {
                             }
                         }
                     }
-                } else {
-                    Text("Not checked yet. Go back and tap Check for recalls.")
+                } else if !store.isChecking(medication) {
+                    Text("Not checked yet.")
                         .foregroundStyle(.secondary)
+                }
+            } header: {
+                Text("Recalls")
+            } footer: {
+                if let at = store.checkedAt(medication) {
+                    Text("Checked \(at, format: .relative(presentation: .named)).")
                 }
             }
 
@@ -58,6 +76,9 @@ struct MedicationDetailView: View {
         }
         .navigationTitle(medication.name)
         .navigationBarTitleDisplayMode(.large)
+        .navigationDestination(for: RecallMatch.self) { match in
+            RecallDetailView(match: match)
+        }
         .confirmationDialog("Remove \(medication.name)?", isPresented: $confirmingDelete, titleVisibility: .visible) {
             Button("Remove", role: .destructive) {
                 onDelete()
