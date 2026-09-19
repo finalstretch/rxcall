@@ -7,12 +7,7 @@ struct ContentView: View {
     @AppStorage("hasSeenNotice") private var hasSeenNotice = false
 
     @State private var showingAdd = false
-    @State private var results: [PersistentIdentifier: [RecallMatch]] = [:]
-    @State private var checking = false
-    @State private var lastChecked: Date?
-    @State private var errorMessage: String?
-
-    private let client = OpenFDAClient()
+    @State private var store = RecallStore()
 
     var body: some View {
         NavigationStack {
@@ -38,13 +33,14 @@ struct ContentView: View {
                     .interactiveDismissDisabled()
             }
             #if DEBUG
-            .task { if Demo.isActive { await checkAll() } }
+            .task { if Demo.isActive { await store.checkAll(medications) } }
             #endif
-            .alert("Couldn't check", isPresented: Binding(get: { errorMessage != nil },
-                                                          set: { if !$0 { errorMessage = nil } })) {
+            .alert("Couldn't check", isPresented: Binding(get: { store.errorMessage != nil },
+                                                          set: { if !$0 { store.errorMessage = nil } })) {
                 Button("OK") {}
-            } message: { Text(errorMessage ?? "") }
+            } message: { Text(store.errorMessage ?? "") }
         }
+        .environment(store)
     }
 
     // MARK: - Pieces
@@ -64,11 +60,9 @@ struct ContentView: View {
         List {
             ForEach(medications) { med in
                 NavigationLink {
-                    MedicationDetailView(medication: med, matches: results[med.persistentModelID]) {
-                        delete(med)
-                    }
+                    MedicationDetailView(medication: med) { delete(med) }
                 } label: {
-                    MedicationRow(medication: med, matches: results[med.persistentModelID])
+                    MedicationRow(medication: med, matches: store.matches(for: med))
                 }
                 // Swipe from either edge to remove; a full swipe does it in one go.
                 .swipeActions(edge: .leading, allowsFullSwipe: true) {
@@ -82,15 +76,12 @@ struct ContentView: View {
             Section {
             } footer: {
                 VStack(alignment: .leading, spacing: 6) {
-                    if let lastChecked {
+                    if let lastChecked = store.lastChecked {
                         Text("Last checked \(lastChecked, format: .relative(presentation: .named)).")
                     }
                     Text("Not medical advice. Talk to your pharmacist before changing any medication.")
                 }
             }
-        }
-        .navigationDestination(for: RecallMatch.self) { match in
-            RecallDetailView(match: match)
         }
     }
 
@@ -98,9 +89,9 @@ struct ContentView: View {
     /// that at accessibility text sizes the results aren't pushed off screen.
     private var footer: some View {
         Button {
-            Task { await checkAll() }
+            Task { await store.checkAll(medications) }
         } label: {
-            if checking {
+            if store.isCheckingAny {
                 ProgressView().frame(maxWidth: .infinity)
             } else {
                 Text("Check for recalls").frame(maxWidth: .infinity)
@@ -108,36 +99,19 @@ struct ContentView: View {
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
-        .disabled(checking || medications.isEmpty)
+        .disabled(store.isCheckingAny || medications.isEmpty)
         .padding()
         .background(.bar)
     }
 
     // MARK: - Actions
 
-    private func checkAll() async {
-        checking = true
-        defer { checking = false }
-        var new: [PersistentIdentifier: [RecallMatch]] = [:]
-        for med in medications {
-            do {
-                let recalls = try await client.ongoingRecalls(for: med)
-                new[med.persistentModelID] = RecallMatcher.matches(for: med, in: recalls)
-            } catch {
-                errorMessage = "Couldn't reach the FDA's recall service. Check your connection and try again."
-                return
-            }
-        }
-        results = new
-        lastChecked = .now
-    }
-
     private func delete(at offsets: IndexSet) {
         for i in offsets { delete(medications[i]) }
     }
 
     private func delete(_ medication: Medication) {
-        results[medication.persistentModelID] = nil
+        store.forget(medication)
         context.delete(medication)
     }
 }
