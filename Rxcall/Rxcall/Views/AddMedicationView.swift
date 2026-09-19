@@ -103,6 +103,7 @@ struct AddMedicationView: View {
         context.insert(Medication(name: name.trimmingCharacters(in: .whitespacesAndNewlines),
                                   genericName: generic, ndc: clean(ndc), lotNumber: clean(lot),
                                   strength: clean(strength)))
+        Notifications.requestPermissionIfNeeded()
         dismiss()
     }
 }

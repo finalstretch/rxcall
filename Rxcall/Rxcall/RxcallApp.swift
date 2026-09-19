@@ -13,11 +13,20 @@ struct RxcallApp: App {
         return container
     }()
 
+    @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+        BackgroundRefresh.register(container: container)
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
         }
         .modelContainer(container)
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background { BackgroundRefresh.schedule() }
+        }
     }
 }
 

@@ -25,6 +25,22 @@ struct ContentView: View {
                         Label("Add medication", systemImage: "plus")
                     }
                 }
+                #if DEBUG
+                ToolbarItem(placement: .secondaryAction) {
+                    Button("Debug: run background check") {
+                        Task { await runBackgroundCheck() }
+                    }
+                }
+                ToolbarItem(placement: .secondaryAction) {
+                    Button("Debug: simulate a new recall") {
+                        // Forget the newest cached recall so the next check treats it as new.
+                        for med in medications where !med.cachedRecalls.isEmpty {
+                            med.cachedRecalls = Array(med.cachedRecalls.dropFirst())
+                        }
+                        Task { await runBackgroundCheck() }
+                    }
+                }
+                #endif
             }
             .safeAreaInset(edge: .bottom) { footer }
             .sheet(isPresented: $showingAdd) { AddMedicationView() }
@@ -105,6 +121,14 @@ struct ContentView: View {
     }
 
     // MARK: - Actions
+
+    #if DEBUG
+    private func runBackgroundCheck() async {
+        let n = await BackgroundRefresh.checkAllAndNotify(container: context.container)
+        store.errorMessage = n.map { "Background check ran: \($0) new recall(s). Notifications arrive in a moment." }
+            ?? "Background check failed (network)."
+    }
+    #endif
 
     private func delete(at offsets: IndexSet) {
         for i in offsets { delete(medications[i]) }
