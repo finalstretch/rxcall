@@ -18,7 +18,13 @@
       <rect x="-150" y="0" width="300" height="370" fill="url(#amber)"/>
       <rect x="-150" y="-7" width="300" height="14" fill="#0f766e" opacity=".35"/>
       <rect x="-118" y="-330" width="36" height="290" rx="18" fill="#ffffff" opacity=".55"/>
-      <rect x="-34" y="48" width="68" height="190" rx="34" fill="#134e4a"/>
-      <circle cx="0" cy="300" r="38" fill="#134e4a"/>
+      
     </g>
-  </g></svg>
+  </g>
+  <!-- alert disc, centred on the capsule -->
+  <g filter="url(#shadow)">
+    <circle cx="512" cy="512" r="166" fill="#ffffff"/><circle cx="512" cy="512" r="140" fill="#f43f5e"/>
+  </g>
+  <rect x="486" y="412" width="52" height="118" rx="26" fill="#ffffff"/>
+  <circle cx="512" cy="582" r="30" fill="#ffffff"/>
+</svg>
