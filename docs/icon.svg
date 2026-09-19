@@ -18,7 +18,7 @@
       <rect x="-150" y="0" width="300" height="370" fill="url(#amber)"/>
       <rect x="-150" y="-7" width="300" height="14" fill="#0f766e" opacity=".35"/>
       <rect x="-118" y="-330" width="36" height="290" rx="18" fill="#ffffff" opacity=".55"/>
-      <rect x="-22" y="60" width="44" height="150" rx="22" fill="#ffffff"/>
-      <circle cx="0" cy="270" r="26" fill="#ffffff"/>
+      <rect x="-34" y="48" width="68" height="190" rx="34" fill="#134e4a"/>
+      <circle cx="0" cy="300" r="38" fill="#134e4a"/>
     </g>
   </g></svg>
