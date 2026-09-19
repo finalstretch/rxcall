@@ -63,24 +63,18 @@ struct ContentView: View {
     private var list: some View {
         List {
             ForEach(medications) { med in
-                Section {
-                    if let matches = results[med.persistentModelID] {
-                        if matches.isEmpty {
-                            Label("No ongoing recalls found", systemImage: "checkmark.circle")
-                                .foregroundStyle(.secondary)
-                        } else {
-                            ForEach(matches) { match in
-                                NavigationLink(value: match) {
-                                    RecallRow(match: match)
-                                }
-                            }
-                        }
-                    } else {
-                        Text("Not checked yet")
-                            .foregroundStyle(.secondary)
+                NavigationLink {
+                    MedicationDetailView(medication: med, matches: results[med.persistentModelID]) {
+                        delete(med)
                     }
-                } header: {
-                    MedicationHeader(medication: med)
+                } label: {
+                    MedicationRow(medication: med, matches: results[med.persistentModelID])
+                }
+                // Swipe from either edge to remove; a full swipe does it in one go.
+                .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                    Button(role: .destructive) { delete(med) } label: {
+                        Label("Remove", systemImage: "trash")
+                    }
                 }
             }
             .onDelete(perform: delete)
@@ -139,51 +133,42 @@ struct ContentView: View {
     }
 
     private func delete(at offsets: IndexSet) {
-        for i in offsets { context.delete(medications[i]) }
+        for i in offsets { delete(medications[i]) }
+    }
+
+    private func delete(_ medication: Medication) {
+        results[medication.persistentModelID] = nil
+        context.delete(medication)
     }
 }
 
-private struct MedicationHeader: View {
+/// One medication in the list, with a one-line recall status.
+private struct MedicationRow: View {
     let medication: Medication
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(medication.name).font(.headline).textCase(nil)
-            if let generic = medication.genericName, generic.lowercased() != medication.name.lowercased() {
-                Text(generic).font(.subheadline).textCase(nil)
-            }
-            if medication.ndc != nil || medication.lotNumber != nil {
-                Text([medication.ndc.map { "NDC \($0)" }, medication.lotNumber.map { "Lot \($0)" }]
-                    .compactMap { $0 }.joined(separator: " · "))
-                    .font(.caption).textCase(nil)
-            }
-        }
-    }
-}
+    let matches: [RecallMatch]?
 
-private struct RecallRow: View {
-    let match: RecallMatch
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline) {
-                Image(systemName: match.confidence == .ndc ? "exclamationmark.triangle.fill" : "questionmark.circle")
-                    .accessibilityHidden(true)
-                Text(match.confidence.label).font(.subheadline.weight(.semibold))
+        VStack(alignment: .leading, spacing: 3) {
+            Text(medication.name).font(.headline)
+            if let generic = medication.genericName, generic.lowercased() != medication.name.lowercased() {
+                Text(generic).font(.subheadline).foregroundStyle(.secondary)
             }
-            Text(match.recall.productDescription)
+            Label(status.text, systemImage: status.symbol)
                 .font(.subheadline)
-                .lineLimit(2)
-            HStack {
-                Text(match.recall.classificationSummary.title)
-                if let d = match.recall.initiationDate {
-                    Text("·").accessibilityHidden(true)
-                    Text(d, format: .dateTime.month().day().year())
-                }
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
+                .foregroundStyle(status.warn ? Color.primary : Color.secondary)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
         .accessibilityElement(children: .combine)
+    }
+
+    private var status: (text: String, symbol: String, warn: Bool) {
+        guard let matches else { return ("Not checked yet", "circle.dotted", false) }
+        if matches.isEmpty { return ("No ongoing recalls", "checkmark.circle", false) }
+        if matches.contains(where: { $0.confidence == .ndc }) {
+            return ("Recall matches your bottle", "exclamationmark.triangle.fill", true)
+        }
+        let n = matches.count
+        return ("\(n) possible \(n == 1 ? "match" : "matches") — check lot numbers", "questionmark.circle", true)
     }
 }
 

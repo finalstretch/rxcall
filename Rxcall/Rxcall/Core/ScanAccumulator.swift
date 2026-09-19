@@ -16,6 +16,10 @@ final class ScanAccumulator {
     private(set) var ndc: String?
     private(set) var lotNumber: String?
     private(set) var framesSeen = 0
+    /// When the camera last read a line it hadn't seen before. Goes quiet when
+    /// the person has stopped turning the bottle or is showing the same side.
+    private(set) var lastNewReadAt: Date?
+    private var seenLines = Set<String>()
 
     private var drugVotes: [String: (entry: DrugEntry, votes: Int)] = [:]
     private var ndcVotes: [String: Int] = [:]
@@ -34,6 +38,13 @@ final class ScanAccumulator {
 
     var leader: DrugEntry? { candidates.first?.entry }
 
+    /// Something's still missing and nothing new has been read for a while —
+    /// time to suggest a different side of the bottle.
+    var isStalled: Bool {
+        guard let last = lastNewReadAt, !(isStable && ndc != nil && lotNumber != nil) else { return false }
+        return Date().timeIntervalSince(last) > 2.5
+    }
+
     /// True once one drug has clearly pulled ahead.
     var isStable: Bool {
         guard let top = candidates.first else { return false }
@@ -51,6 +62,9 @@ final class ScanAccumulator {
         framesSeen += 1
 
         let text = textLines.joined(separator: "\n")
+        for line in textLines where line.count >= 4 && seenLines.insert(line).inserted {
+            lastNewReadAt = now
+        }
 
         // A brand name seen on the label counts for 4, an ingredient for 3, and a
         // long word that's the start of a drug name (the rest cut off by the
