@@ -53,11 +53,19 @@ struct RecallDetailView: View {
             }
 
             Section("Why") {
-                Text(recall.reasonForRecall).textSelection(.enabled)
+                if let plain = RecallGlossary.explanation(for: recall.reasonForRecall) {
+                    Text(plain)
+                    Text(recall.reasonForRecall)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                } else {
+                    Text(recall.reasonForRecall).textSelection(.enabled)
+                }
             }
 
             Section("What to do") {
-                Text("Don't stop taking a medication on your own. Take your bottle to your pharmacist, or call them, and ask whether it's part of this recall and what to do next.")
+                Text(RecallGlossary.whatToDo(for: recall.classification))
             }
 
             Section("Details") {

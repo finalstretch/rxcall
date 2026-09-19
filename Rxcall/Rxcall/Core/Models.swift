@@ -163,5 +163,19 @@ enum MatchConfidence: Comparable {
 struct RecallMatch: Identifiable, Hashable {
     let recall: Recall
     let confidence: MatchConfidence
+    /// The recall text mentions the strength on the person's bottle.
+    var mentionsStrength = false
     var id: String { recall.id }
+}
+
+extension Recall {
+    /// Class I = 0 … unclassified = 3, for sorting most serious first.
+    var severityRank: Int {
+        switch classification {
+        case "Class I": return 0
+        case "Class II": return 1
+        case "Class III": return 2
+        default: return 3
+        }
+    }
 }

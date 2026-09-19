@@ -10,8 +10,21 @@ struct MedicationDetailView: View {
     @Environment(RecallStore.self) private var store
     @Environment(\.dismiss) private var dismiss
     @State private var confirmingDelete = false
+    @State private var showingAll = false
 
     private var matches: [RecallMatch]? { store.matches(for: medication) }
+
+    /// Long lists (levothyroxine has 60+ ongoing recalls) show the ones that
+    /// matter most and fold the rest away. Everything certain, new, or naming
+    /// the bottle's strength stays visible.
+    private let visibleLimit = 5
+    private func visible(_ all: [RecallMatch]) -> [RecallMatch] {
+        if showingAll || all.count <= visibleLimit { return all }
+        let important = all.filter { $0.confidence == .ndc || $0.mentionsStrength || !medication.hasSeen($0.recall) }
+        var out = Array(all.prefix(visibleLimit))
+        for m in important where !out.contains(m) { out.append(m) }
+        return all.filter { out.contains($0) }
+    }
 
     var body: some View {
         List {
@@ -52,10 +65,16 @@ struct MedicationDetailView: View {
                         Label("No ongoing recalls found", systemImage: "checkmark.circle")
                             .foregroundStyle(.secondary)
                     } else {
-                        ForEach(matches) { match in
+                        let shown = visible(matches)
+                        ForEach(shown) { match in
                             NavigationLink(value: match) {
                                 RecallRow(match: match, isNew: !medication.hasSeen(match.recall))
                             }
+                        }
+                        if shown.count < matches.count {
+                            Button("Show \(matches.count - shown.count) more") { showingAll = true }
+                        } else if showingAll && matches.count > visibleLimit {
+                            Button("Show fewer") { showingAll = false }
                         }
                     }
                 } else if !store.isChecking(medication) {
@@ -116,6 +135,11 @@ struct RecallRow: View {
                         .padding(.horizontal, 7).padding(.vertical, 2)
                         .background(Color.accentColor.opacity(0.15), in: Capsule())
                 }
+            }
+            if match.mentionsStrength {
+                Label("Mentions your strength", systemImage: "checkmark")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
             }
             Text(match.recall.productDescription)
                 .font(.subheadline)
