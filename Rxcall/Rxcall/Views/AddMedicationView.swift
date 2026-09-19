@@ -2,6 +2,9 @@ import SwiftUI
 import SwiftData
 
 struct AddMedicationView: View {
+    /// Open straight into the camera — the empty state's primary action.
+    var startScanning = false
+
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
 
@@ -69,6 +72,7 @@ struct AddMedicationView: View {
             }
             .navigationTitle("Add medication")
             .navigationBarTitleDisplayMode(.inline)
+            .onAppear { if startScanning { scanning = true } }
             .sheet(isPresented: $scanning) {
                 ScanView { result in
                     if let entry = result.entry {

@@ -7,6 +7,7 @@ struct ContentView: View {
     @AppStorage("hasSeenNotice") private var hasSeenNotice = false
 
     @State private var showingAdd = false
+    @State private var addByScanning = false
     @State private var store = RecallStore()
 
     var body: some View {
@@ -43,7 +44,9 @@ struct ContentView: View {
                 #endif
             }
             .safeAreaInset(edge: .bottom) { footer }
-            .sheet(isPresented: $showingAdd) { AddMedicationView() }
+            .sheet(isPresented: $showingAdd, onDismiss: { addByScanning = false }) {
+                AddMedicationView(startScanning: addByScanning)
+            }
             .sheet(isPresented: Binding(get: { !hasSeenNotice }, set: { _ in })) {
                 NoticeView { hasSeenNotice = true }
                     .interactiveDismissDisabled()
@@ -67,8 +70,17 @@ struct ContentView: View {
         } description: {
             Text("Add what you take and Rx-call will check the FDA's recall list for it. Your list stays on this phone.")
         } actions: {
-            Button("Add medication") { showingAdd = true }
+            VStack(spacing: 12) {
+                Button {
+                    addByScanning = true
+                    showingAdd = true
+                } label: {
+                    Label("Scan a bottle", systemImage: "camera.viewfinder")
+                }
                 .buttonStyle(.borderedProminent)
+                .controlSize(.large)
+                Button("Type a name instead") { showingAdd = true }
+            }
         }
     }
 

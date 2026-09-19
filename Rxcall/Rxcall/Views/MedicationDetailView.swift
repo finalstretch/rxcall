@@ -11,6 +11,8 @@ struct MedicationDetailView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var confirmingDelete = false
     @State private var showingAll = false
+    @State private var about: DrugInfo?
+    @State private var aboutLoaded = false
 
     private var matches: [RecallMatch]? { store.matches(for: medication) }
 
@@ -89,6 +91,19 @@ struct MedicationDetailView: View {
                 }
             }
 
+            if let about {
+                Section {
+                    Text(about.summary)
+                    Link(destination: about.url) {
+                        Label("Read more on MedlinePlus", systemImage: "arrow.up.right.square")
+                    }
+                } header: {
+                    Text("About \(about.title)")
+                } footer: {
+                    Text("From MedlinePlus, the National Library of Medicine. General information, not advice about your situation.")
+                }
+            }
+
             Section {
                 Button("Remove medication", role: .destructive) { confirmingDelete = true }
                     .frame(maxWidth: .infinity)
@@ -96,6 +111,11 @@ struct MedicationDetailView: View {
         }
         .navigationTitle(medication.name)
         .navigationBarTitleDisplayMode(.large)
+        .task {
+            guard !aboutLoaded else { return }
+            aboutLoaded = true
+            about = await MedlinePlusClient.shared.info(for: medication)
+        }
         .navigationDestination(for: RecallMatch.self) { match in
             RecallDetailView(match: match, medication: medication)
                 .onAppear { store.markSeen(match, for: medication) }
