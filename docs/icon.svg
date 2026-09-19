@@ -21,10 +21,7 @@
       
     </g>
   </g>
-  <!-- alert disc, centred on the capsule -->
-  <g filter="url(#shadow)">
-    <circle cx="512" cy="512" r="166" fill="#ffffff"/><circle cx="512" cy="512" r="140" fill="#f43f5e"/>
-  </g>
-  <rect x="486" y="412" width="52" height="118" rx="26" fill="#ffffff"/>
-  <circle cx="512" cy="582" r="30" fill="#ffffff"/>
+  <g filter="url(#shadow)"><circle cx="690" cy="720" r="134" fill="#ffffff"/><circle cx="690" cy="720" r="118" fill="#f43f5e"/></g>
+  <rect x="669.94" y="646.84" width="40.120000000000005" height="92.04" rx="20.060000000000002" fill="#ffffff"/>
+  <circle cx="690" cy="773.1" r="22.42" fill="#ffffff"/>
 </svg>
