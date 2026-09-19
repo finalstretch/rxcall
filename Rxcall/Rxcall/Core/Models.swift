@@ -14,7 +14,15 @@ final class Medication {
     /// Lot number from the bottle, if entered. Shown next to a recall's lot
     /// list so the user can compare; never parsed or matched automatically.
     var lotNumber: String?
+    /// Strength as printed, e.g. "500 mg". Used to rank recalls that mention it.
+    var strength: String?
     var addedAt: Date
+
+    /// Last successful check and what it returned, so the app has something to
+    /// show offline and can tell a new recall from one already seen.
+    var lastCheckedAt: Date?
+    var cachedRecallData: Data?
+    var seenRecallNumbers: [String] = []
 
     /// Names worth searching the recall feed for.
     var searchTerms: [String] {
@@ -22,18 +30,30 @@ final class Medication {
         return [name, genericName]
     }
 
-    init(name: String, genericName: String? = nil, ndc: String? = nil, lotNumber: String? = nil) {
+    init(name: String, genericName: String? = nil, ndc: String? = nil, lotNumber: String? = nil, strength: String? = nil) {
         self.name = name
         self.genericName = genericName
         self.ndc = ndc
         self.lotNumber = lotNumber
+        self.strength = strength
         self.addedAt = .now
+    }
+
+    var cachedRecalls: [Recall] {
+        get { cachedRecallData.flatMap { try? JSONDecoder().decode([Recall].self, from: $0) } ?? [] }
+        set { cachedRecallData = try? JSONEncoder().encode(newValue) }
+    }
+
+    func hasSeen(_ recall: Recall) -> Bool { seenRecallNumbers.contains(recall.recallNumber) }
+
+    func markSeen(_ recall: Recall) {
+        if !hasSeen(recall) { seenRecallNumbers.append(recall.recallNumber) }
     }
 }
 
 /// One record from the openFDA drug enforcement API.
 /// Field names mirror the API; see docs/openfda-notes.md for what they contain.
-struct Recall: Decodable, Identifiable, Hashable {
+struct Recall: Codable, Identifiable, Hashable {
     let recallNumber: String
     let status: String
     let classification: String
@@ -46,7 +66,7 @@ struct Recall: Decodable, Identifiable, Hashable {
     let distributionPattern: String?
     let openfda: OpenFDA?
 
-    struct OpenFDA: Decodable, Hashable {
+    struct OpenFDA: Codable, Hashable {
         let brandName: [String]?
         let genericName: [String]?
         let productNdc: [String]?

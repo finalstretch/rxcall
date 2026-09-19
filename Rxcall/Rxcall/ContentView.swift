@@ -76,7 +76,7 @@ struct ContentView: View {
             Section {
             } footer: {
                 VStack(alignment: .leading, spacing: 6) {
-                    if let lastChecked = store.lastChecked {
+                    if let lastChecked = store.lastChecked(medications) {
                         Text("Last checked \(lastChecked, format: .relative(presentation: .named)).")
                     }
                     Text("Not medical advice. Talk to your pharmacist before changing any medication.")
@@ -111,7 +111,6 @@ struct ContentView: View {
     }
 
     private func delete(_ medication: Medication) {
-        store.forget(medication)
         context.delete(medication)
     }
 }
@@ -120,6 +119,7 @@ struct ContentView: View {
 private struct MedicationRow: View {
     let medication: Medication
     let matches: [RecallMatch]?
+    var unseen: Int { (matches ?? []).filter { !medication.hasSeen($0.recall) }.count }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -127,9 +127,17 @@ private struct MedicationRow: View {
             if let generic = medication.genericName, generic.lowercased() != medication.name.lowercased() {
                 Text(generic).font(.subheadline).foregroundStyle(.secondary)
             }
-            Label(status.text, systemImage: status.symbol)
-                .font(.subheadline)
-                .foregroundStyle(status.warn ? Color.primary : Color.secondary)
+            HStack(spacing: 8) {
+                Label(status.text, systemImage: status.symbol)
+                    .font(.subheadline)
+                    .foregroundStyle(status.warn ? Color.primary : Color.secondary)
+                if unseen > 0 {
+                    Text("\(unseen) new")
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 7).padding(.vertical, 2)
+                        .background(Color.accentColor.opacity(0.15), in: Capsule())
+                }
+            }
         }
         .padding(.vertical, 2)
         .accessibilityElement(children: .combine)

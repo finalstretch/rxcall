@@ -1,26 +1,30 @@
 import Foundation
 import SwiftData
 
-/// Recall results for this session, shared by the list and the medication
-/// screens so a check started from either shows up in both. Results aren't
-/// persisted: they're re-fetched on demand and go stale fast.
+/// Recall results, shared by the list and the medication screens so a check
+/// started from either shows on both. The last successful result for each
+/// medication is cached on the medication itself, so there's something to
+/// show offline and new recalls can be told from ones already seen.
 @Observable
 @MainActor
 final class RecallStore {
-    private(set) var results: [PersistentIdentifier: [RecallMatch]] = [:]
-    private(set) var checkedAt: [PersistentIdentifier: Date] = [:]
     private(set) var checking: Set<PersistentIdentifier> = []
     var errorMessage: String?
+    /// Bumped after every check so views re-read the cache on the model.
+    private(set) var version = 0
 
     private let client = OpenFDAClient()
 
-    /// nil = not checked yet this session.
+    /// nil = never checked.
     func matches(for medication: Medication) -> [RecallMatch]? {
-        results[medication.persistentModelID]
+        _ = version
+        guard medication.lastCheckedAt != nil else { return nil }
+        return RecallMatcher.matches(for: medication, in: medication.cachedRecalls)
     }
 
     func checkedAt(_ medication: Medication) -> Date? {
-        checkedAt[medication.persistentModelID]
+        _ = version
+        return medication.lastCheckedAt
     }
 
     func isChecking(_ medication: Medication) -> Bool {
@@ -29,19 +33,29 @@ final class RecallStore {
 
     var isCheckingAny: Bool { !checking.isEmpty }
 
-    /// Most recent check across all medications, for the list footer.
-    var lastChecked: Date? { checkedAt.values.max() }
+    /// Most recent check across the given medications, for the list footer.
+    func lastChecked(_ medications: [Medication]) -> Date? {
+        _ = version
+        return medications.compactMap(\.lastCheckedAt).max()
+    }
+
+    /// Recalls the person hasn't opened yet.
+    func unseen(for medication: Medication) -> [RecallMatch] {
+        (matches(for: medication) ?? []).filter { !medication.hasSeen($0.recall) }
+    }
 
     func check(_ medication: Medication) async {
         let id = medication.persistentModelID
         checking.insert(id)
         defer { checking.remove(id) }
         do {
-            let recalls = try await client.ongoingRecalls(for: medication)
-            results[id] = RecallMatcher.matches(for: medication, in: recalls)
-            checkedAt[id] = .now
+            medication.cachedRecalls = try await client.ongoingRecalls(for: medication)
+            medication.lastCheckedAt = .now
+            version += 1
         } catch {
-            errorMessage = "Couldn't reach the FDA's recall service. Check your connection and try again."
+            errorMessage = medication.lastCheckedAt == nil
+                ? "Couldn't reach the FDA's recall service. Check your connection and try again."
+                : "Couldn't reach the FDA's recall service. Showing the results from the last check."
         }
     }
 
@@ -52,8 +66,8 @@ final class RecallStore {
         }
     }
 
-    func forget(_ medication: Medication) {
-        results[medication.persistentModelID] = nil
-        checkedAt[medication.persistentModelID] = nil
+    func markSeen(_ match: RecallMatch, for medication: Medication) {
+        medication.markSeen(match.recall)
+        version += 1
     }
 }

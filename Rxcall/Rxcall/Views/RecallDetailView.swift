@@ -2,6 +2,7 @@ import SwiftUI
 
 struct RecallDetailView: View {
     let match: RecallMatch
+    var medication: Medication? = nil
     private var recall: Recall { match.recall }
 
     var body: some View {
@@ -34,6 +35,10 @@ struct RecallDetailView: View {
                     Text(codes)
                         .font(.body.monospaced())
                         .textSelection(.enabled)
+                    if let lot = medication?.lotNumber {
+                        LabeledContent("Your bottle", value: lot)
+                            .font(.body.monospaced())
+                    }
                     Text("Compare these with the lot number printed on your bottle.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
