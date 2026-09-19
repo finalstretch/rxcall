@@ -15,6 +15,8 @@ struct ScanView: View {
     let onFinish: (ScanResult) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var scan = ScanAccumulator()
+    @State private var tick = Date()   // re-evaluates the stall check every second
+    private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
     private var canScan: Bool {
         DataScannerViewController.isSupported && DataScannerViewController.isAvailable
@@ -24,14 +26,17 @@ struct ScanView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 if canScan {
-                    LabelScanner(scan: scan)
-                        .ignoresSafeArea(edges: .horizontal)
+                    ZStack {
+                        LabelScanner(scan: scan)
+                        overlay
+                    }
+                    .ignoresSafeArea(edges: .horizontal)
                 } else {
                     ContentUnavailableView("Scanning needs a camera",
                                            systemImage: "camera",
                                            description: Text("This device can't scan labels. You can still type the name."))
                 }
-                findings
+                panel
             }
             .navigationTitle("Scan the label")
             .navigationBarTitleDisplayMode(.inline)
@@ -39,20 +44,89 @@ struct ScanView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Use") { finish() }
-                        .disabled(scan.leader == nil && scan.ndc == nil)
-                }
             }
+            .onReceive(clock) { tick = $0 }
+            .onChange(of: scan.isStable) { _, found in if found { haptic(.success) } }
+            .onChange(of: scan.ndc) { _, v in if v != nil { haptic(.success) } }
+            .onChange(of: scan.lotNumber) { _, v in if v != nil { haptic(.success) } }
         }
     }
 
-    private var findings: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            Text(prompt)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+    // MARK: - Live guidance over the camera
 
+    private var overlay: some View {
+        VStack {
+            HStack(spacing: 8) {
+                chip("Name", done: scan.isStable, partial: scan.leader != nil)
+                chip("NDC", done: scan.ndc != nil, partial: false)
+                chip("Lot", done: scan.lotNumber != nil, partial: false)
+            }
+            .padding(.top, 12)
+            Spacer()
+            HStack(spacing: 14) {
+                Image(systemName: guidance.symbol)
+                    .font(.title2)
+                    .symbolEffect(.pulse, options: .repeating, isActive: guidance.animate)
+                    .accessibilityHidden(true)
+                Text(guidance.text)
+                    .font(.headline)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 18)
+            .padding(.vertical, 14)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 16))
+            .padding(12)
+            .accessibilityAddTraits(.updatesFrequently)
+        }
+    }
+
+    private func chip(_ label: String, done: Bool, partial: Bool) -> some View {
+        Label(label, systemImage: done ? "checkmark.circle.fill" : (partial ? "circle.dotted.circle" : "circle.dotted"))
+            .font(.subheadline.weight(.semibold))
+            .foregroundStyle(done ? Color.green : Color.white)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 6)
+            .background(.black.opacity(0.55), in: Capsule())
+            .accessibilityLabel("\(label): \(done ? "found" : (partial ? "reading" : "not found yet"))")
+    }
+
+    /// What to tell the person right now. The stall check depends on `tick`
+    /// so it's re-evaluated even when the camera reads nothing new.
+    private var guidance: (text: String, symbol: String, animate: Bool) {
+        _ = tick
+        if scan.framesSeen == 0 || scan.lastNewReadAt == nil {
+            return ("Point the camera at the label.", "camera.viewfinder", false)
+        }
+        if scan.isStable && scan.ndc != nil && scan.lotNumber != nil {
+            return ("All set — tap Use.", "checkmark.circle.fill", false)
+        }
+        if scan.isStalled {
+            if scan.isStable {
+                return ("Nothing new here. Try the other side of the label, or tilt the bottle away from the glare.",
+                        "arrow.trianglehead.2.clockwise.rotate.90", true)
+            }
+            return ("Can't make out the name yet. Turn to where the drug name is printed, or move a little closer.",
+                    "arrow.trianglehead.2.clockwise.rotate.90", true)
+        }
+        if !scan.isStable {
+            return ("Slowly turn the bottle.", "arrow.trianglehead.2.clockwise.rotate.90", true)
+        }
+        let missing = [scan.ndc == nil ? "NDC" : nil, scan.lotNumber == nil ? "lot number" : nil]
+            .compactMap { $0 }.joined(separator: " and ")
+        return ("Got the name. Now turn to the other side for the \(missing) — usually near the barcode.",
+                "arrow.trianglehead.2.clockwise.rotate.90", true)
+    }
+
+    private func haptic(_ kind: UINotificationFeedbackGenerator.FeedbackType) {
+        UINotificationFeedbackGenerator().notificationOccurred(kind)
+    }
+
+    // MARK: - Findings and the Use button
+
+    private var panel: some View {
+        VStack(alignment: .leading, spacing: 12) {
             slot("Medication", value: scan.leader?.displayName, found: scan.isStable)
             slot("NDC", value: scan.ndc, found: scan.ndc != nil)
             slot("Lot number", value: scan.lotNumber, found: scan.lotNumber != nil)
@@ -69,10 +143,25 @@ struct ScanView: View {
                     .font(.subheadline)
                 }
             }
+
+            Button {
+                finish()
+            } label: {
+                Text(useLabel).frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
+            .disabled(scan.leader == nil && scan.ndc == nil)
+            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(.bar)
+    }
+
+    private var useLabel: String {
+        guard let name = scan.leader?.displayName else { return "Use" }
+        return scan.isStable ? "Use \(name)" : "Use \(name) anyway"
     }
 
     private func slot(_ label: String, value: String?, found: Bool) -> some View {
@@ -88,14 +177,6 @@ struct ScanView: View {
         }
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(label): \(value ?? "not found yet")\(found ? ", confirmed" : "")")
-    }
-
-    private var prompt: String {
-        if !canScan { return "" }
-        if scan.leader == nil { return "Point the camera at the label and slowly turn the bottle." }
-        if !scan.isStable { return "Keep turning — making sure of the name." }
-        if scan.ndc == nil || scan.lotNumber == nil { return "Got it. Keep turning for the NDC and lot number, or tap Use." }
-        return "All set — tap Use."
     }
 
     private func finish() {
