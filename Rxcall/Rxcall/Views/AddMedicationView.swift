@@ -27,13 +27,44 @@ struct AddMedicationView: View {
     var body: some View {
         NavigationStack {
             Form {
+                // What's about to be added, so a scan result is unmissable.
+                if !name.trimmingCharacters(in: .whitespaces).isEmpty {
+                    Section {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Adding")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .textCase(.uppercase)
+                            Text(name)
+                                .font(.title2.bold())
+                            if let generic = picked?.subtitle {
+                                Text(generic)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if !strength.isEmpty || !ndc.isEmpty || !lot.isEmpty {
+                                Text([strength.isEmpty ? nil : strength,
+                                      ndc.isEmpty ? nil : "NDC \(ndc)",
+                                      lot.isEmpty ? nil : "Lot \(lot)"]
+                                    .compactMap { $0 }.joined(separator: " · "))
+                                    .font(.footnote.monospaced())
+                                    .foregroundStyle(.secondary)
+                                    .padding(.top, 2)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                        .accessibilityElement(children: .combine)
+                    } footer: {
+                        Text("Check this matches the label, then tap Add.")
+                    }
+                }
                 Section {
                     Button {
                         startScan()
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "camera.viewfinder")
-                            Text("Scan the label with the camera")
+                            Text(picked == nil && name.isEmpty ? "Scan the label with the camera" : "Scan again")
                         }
                         .frame(maxWidth: .infinity)
                     }
