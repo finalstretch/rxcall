@@ -219,6 +219,7 @@ private struct LabelScanner: UIViewControllerRepresentable {
             qualityLevel: .accurate,
             recognizesMultipleItems: true,
             isHighFrameRateTrackingEnabled: false,
+            isGuidanceEnabled: false,   // VisionKit's own "Slow down" / "Find text" hints; we show our own
             isHighlightingEnabled: true
         )
         context.coordinator.start(scanner)
