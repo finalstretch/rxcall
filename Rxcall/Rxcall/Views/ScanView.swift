@@ -53,6 +53,10 @@ struct ScanView: View {
                 }
             }
             .sheet(isPresented: $showingHelp) { ScanTutorialView {} }
+            // Turning a bottle in front of the camera can take a while; don't
+            // let the screen dim and lock mid-scan. Restored on the way out.
+            .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
+            .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
             .onReceive(clock) { tick = $0 }
             .onChange(of: scan.isStable) { _, found in if found { haptic(.success) } }
             .onChange(of: scan.ndc) { _, v in if v != nil { haptic(.success) } }
