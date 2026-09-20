@@ -97,7 +97,16 @@ DESCRIPTIVE = {"pain", "reliever", "relief", "extra", "strength", "maximum", "re
                "coated", "enteric", "low", "dose", "dye", "free", "concentrated", "oral", "suspension",
                "mucus", "chest", "congestion", "decongestant", "antihistamine", "motion", "sickness",
                "nausea", "anti", "diarrheal", "itch", "allergies", "care", "health", "pharmacy",
-               "brand", "value", "premium", "quality", "choice", "basic", "signature", "select"}
+               "brand", "value", "premium", "quality", "choice", "basic", "signature", "select",
+               # packaging words on tubes, boxes and bottles that OCR reads before the name
+               "cream", "creme", "ointment", "lotion", "balm", "white", "clear", "skin", "medicated",
+               "treatment", "remover", "wart", "antifungal", "dandruff", "first", "ultra", "max",
+               "relieving", "itch", "rash", "diaper", "muscle", "rub", "foot", "athlete's", "athletes",
+               "jock", "ringworm", "hair", "scalp", "shampoo", "sun", "burn", "lip", "sore", "throat",
+               "ear", "wax", "mouth", "tooth", "teeth", "sensitive", "whitening", "toothpaste", "rinse",
+               "antiseptic", "antibiotic", "antibacterial", "ointments", "creams", "patch", "patches",
+               "roll", "on", "stick", "wipes", "pads", "spray", "mist", "cough", "syrup", "tablets",
+               "kids", "baby", "toddler", "menthol", "cooling", "warming", "penetrating", "therapy"}
 
 def is_descriptive(brand, generic):
     words = re.findall(r"[a-z0-9&']+", brand.lower())

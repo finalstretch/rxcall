@@ -9,6 +9,9 @@ final class ScanAccumulator {
     struct Candidate: Identifiable {
         let entry: DrugEntry
         var votes: Int
+        /// Distinct frames it was seen in. One frame is never enough: a
+        /// stray word on the packaging can look like a product name.
+        var frames: Int
         var id: String { entry.id }
     }
 
@@ -22,7 +25,8 @@ final class ScanAccumulator {
     private(set) var lastNewReadAt: Date?
     private var seenLines = Set<String>()
 
-    private var drugVotes: [String: (entry: DrugEntry, votes: Int)] = [:]
+    private var drugVotes: [String: (entry: DrugEntry, votes: Int, frames: Int)] = [:]
+    private var votedThisFrame = Set<String>()
     private var ndcVotes: [String: Int] = [:]
     private var lotVotes: [String: Int] = [:]
     private var strengthVotes: [String: Int] = [:]
@@ -51,7 +55,7 @@ final class ScanAccumulator {
     var isStable: Bool {
         guard let top = candidates.first else { return false }
         let second = candidates.dropFirst().first?.votes ?? 0
-        return top.votes >= stableVotes && top.votes - second >= stableLead
+        return top.frames >= 2 && top.votes >= stableVotes && top.votes - second >= stableLead
     }
 
     /// Feed one frame's worth of recognized text lines and barcode payloads.
@@ -62,6 +66,7 @@ final class ScanAccumulator {
         guard now.timeIntervalSince(lastProcessed) > 0.25 else { return }
         lastProcessed = now
         framesSeen += 1
+        votedThisFrame.removeAll()
 
         let text = textLines.joined(separator: "\n")
         for line in textLines where line.count >= 4 && seenLines.insert(line).inserted {
@@ -87,7 +92,7 @@ final class ScanAccumulator {
         for st in Self.strengths(in: text) { strengthVotes[st, default: 0] += 1 }
 
         candidates = drugVotes.values
-            .map { Candidate(entry: $0.entry, votes: $0.votes) }
+            .map { Candidate(entry: $0.entry, votes: $0.votes, frames: $0.frames) }
             .sorted { ($0.votes, -$0.entry.displayName.count) > ($1.votes, -$1.entry.displayName.count) }
         ndc = ndcVotes.max { $0.value < $1.value }?.key
         lotNumber = lotVotes.max { $0.value < $1.value }?.key
@@ -95,7 +100,10 @@ final class ScanAccumulator {
     }
 
     private func vote(_ entry: DrugEntry, weight: Int) {
-        drugVotes[entry.id, default: (entry, 0)].votes += weight
+        drugVotes[entry.id, default: (entry, 0, 0)].votes += weight
+        if votedThisFrame.insert(entry.id).inserted {
+            drugVotes[entry.id]!.frames += 1
+        }
     }
 
     // MARK: - Pulling codes out of text
