@@ -2,17 +2,23 @@ import SwiftUI
 import SwiftData
 
 struct AddMedicationView: View {
-    /// Open straight into the camera — the empty state's primary action.
-    var startScanning = false
-
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
 
-    @State private var name = ""
+    @State private var name: String
     @State private var picked: DrugEntry?
-    @State private var ndc = ""
-    @State private var lot = ""
-    @State private var strength = ""
+    @State private var ndc: String
+    @State private var lot: String
+    @State private var strength: String
+
+    /// Empty form, or one pre-filled from a scan done before the form opened.
+    init(prefill: ScanResult? = nil) {
+        _name = State(initialValue: prefill?.entry?.displayName ?? "")
+        _picked = State(initialValue: prefill?.entry)
+        _ndc = State(initialValue: prefill?.ndc ?? "")
+        _lot = State(initialValue: prefill?.lotNumber ?? "")
+        _strength = State(initialValue: prefill?.strength ?? "")
+    }
     /// One sheet slot: the tutorial hands off to the camera via onDismiss,
     /// since presenting a new sheet while one is dismissing doesn't work.
     private enum Sheet: String, Identifiable { case tutorial, scanner; var id: String { rawValue } }
@@ -124,14 +130,6 @@ struct AddMedicationView: View {
             }
             .navigationTitle("Add medication")
             .navigationBarTitleDisplayMode(.inline)
-            // Keyed on the flag: the sheet can be built before the parent has
-            // set it, so a plain .task would see false and never re-run.
-            .task(id: startScanning) {
-                guard startScanning, sheet == nil else { return }
-                // Wait for this sheet to finish presenting before stacking another.
-                try? await Task.sleep(for: .milliseconds(450))
-                startScan()
-            }
             .sheet(item: $sheet, onDismiss: {
                 if scanAfterTutorial { scanAfterTutorial = false; sheet = .scanner }
             }) { which in

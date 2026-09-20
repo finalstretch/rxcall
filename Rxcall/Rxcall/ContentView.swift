@@ -6,10 +6,21 @@ struct ContentView: View {
     @Query(sort: \Medication.addedAt) private var medications: [Medication]
     @AppStorage("hasSeenNotice") private var hasSeenNotice = false
 
-    /// How the add sheet was opened. Using the mode as the sheet's item means
-    /// the sheet is always built with the right value.
-    private enum AddMode: String, Identifiable { case typing, scanning; var id: String { rawValue } }
-    @State private var adding: AddMode?
+    /// One sheet slot. "Scan a bottle" goes straight to the camera (after the
+    /// one-time tutorial); the add form only appears afterwards, pre-filled.
+    /// Hand-offs go through onDismiss, since a sheet can't be presented while
+    /// another is dismissing.
+    private enum Sheet: Identifiable {
+        case typing, tutorial, scanner, form(ScanResult)
+        var id: String {
+            switch self {
+            case .typing: "typing"; case .tutorial: "tutorial"; case .scanner: "scanner"; case .form: "form"
+            }
+        }
+    }
+    @State private var sheet: Sheet?
+    @State private var nextSheet: Sheet?
+    @AppStorage("hasSeenScanTutorial") private var hasSeenScanTutorial = false
     @State private var store = RecallStore()
 
     var body: some View {
@@ -50,8 +61,22 @@ struct ContentView: View {
                 #endif
             }
             .safeAreaInset(edge: .bottom) { footer }
-            .sheet(item: $adding) { mode in
-                AddMedicationView(startScanning: mode == .scanning)
+            .sheet(item: $sheet, onDismiss: {
+                if let n = nextSheet { nextSheet = nil; sheet = n }
+            }) { which in
+                switch which {
+                case .typing:
+                    AddMedicationView()
+                case .tutorial:
+                    ScanTutorialView {
+                        hasSeenScanTutorial = true
+                        nextSheet = .scanner
+                    }
+                case .scanner:
+                    ScanView { result in nextSheet = .form(result) }
+                case .form(let result):
+                    AddMedicationView(prefill: result)
+                }
             }
             .sheet(isPresented: Binding(get: { !hasSeenNotice }, set: { _ in })) {
                 NoticeView { hasSeenNotice = true }
@@ -59,7 +84,7 @@ struct ContentView: View {
             }
             #if DEBUG
             .task {
-                if Demo.showsTutorial { adding = .scanning }
+                if Demo.showsTutorial { sheet = .tutorial }
                 if Demo.isActive { await store.checkAll(medications) }
             }
             #endif
@@ -81,13 +106,13 @@ struct ContentView: View {
         } actions: {
             VStack(spacing: 12) {
                 Button {
-                    adding = .scanning
+                    sheet = hasSeenScanTutorial ? .scanner : .tutorial
                 } label: {
                     Label("Scan a bottle", systemImage: "camera.viewfinder")
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                Button("Type a name instead") { adding = .typing }
+                Button("Type a name instead") { sheet = .typing }
             }
         }
     }
@@ -134,7 +159,7 @@ struct ContentView: View {
             }
             .disabled(store.isCheckingAny || medications.isEmpty)
 
-            Button { adding = .typing } label: {
+            Button { sheet = .typing } label: {
                 Image(systemName: "plus")
                     .font(.title3.weight(.semibold))
                     .frame(minWidth: 28)
