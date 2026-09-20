@@ -13,7 +13,12 @@ struct AddMedicationView: View {
     @State private var ndc = ""
     @State private var lot = ""
     @State private var strength = ""
-    @State private var scanning = false
+    /// One sheet slot: the tutorial hands off to the camera via onDismiss,
+    /// since presenting a new sheet while one is dismissing doesn't work.
+    private enum Sheet: String, Identifiable { case tutorial, scanner; var id: String { rawValue } }
+    @State private var sheet: Sheet?
+    @State private var scanAfterTutorial = false
+    @AppStorage("hasSeenScanTutorial") private var hasSeenScanTutorial = false
 
     private var suggestions: [DrugEntry] {
         picked == nil ? DrugIndex.shared.suggestions(for: name) : []
@@ -24,7 +29,7 @@ struct AddMedicationView: View {
             Form {
                 Section {
                     Button {
-                        scanning = true
+                        startScan()
                     } label: {
                         Label("Scan the label with the camera", systemImage: "camera.viewfinder")
                     }
@@ -72,16 +77,25 @@ struct AddMedicationView: View {
             }
             .navigationTitle("Add medication")
             .navigationBarTitleDisplayMode(.inline)
-            .onAppear { if startScanning { scanning = true } }
-            .sheet(isPresented: $scanning) {
-                ScanView { result in
-                    if let entry = result.entry {
-                        picked = entry
-                        name = entry.displayName
+            // Keyed on the flag: the sheet can be built before the parent has
+            // set it, so a plain .task would see false and never re-run.
+            .task(id: startScanning) {
+                guard startScanning, sheet == nil else { return }
+                // Wait for this sheet to finish presenting before stacking another.
+                try? await Task.sleep(for: .milliseconds(450))
+                startScan()
+            }
+            .sheet(item: $sheet, onDismiss: {
+                if scanAfterTutorial { scanAfterTutorial = false; sheet = .scanner }
+            }) { which in
+                switch which {
+                case .tutorial:
+                    ScanTutorialView {
+                        hasSeenScanTutorial = true
+                        scanAfterTutorial = true
                     }
-                    if let code = result.ndc, ndc.isEmpty { ndc = code }
-                    if let code = result.lotNumber, lot.isEmpty { lot = code }
-                    if let s = result.strength, strength.isEmpty { strength = s }
+                case .scanner:
+                    scanner
                 }
             }
             .toolbar {
@@ -94,6 +108,23 @@ struct AddMedicationView: View {
                 }
             }
         }
+    }
+
+    private var scanner: some View {
+        ScanView { result in
+            if let entry = result.entry {
+                picked = entry
+                name = entry.displayName
+            }
+            if let code = result.ndc, ndc.isEmpty { ndc = code }
+            if let code = result.lotNumber, lot.isEmpty { lot = code }
+            if let s = result.strength, strength.isEmpty { strength = s }
+        }
+    }
+
+    /// First time through, show how it works; after that, straight to the camera.
+    private func startScan() {
+        sheet = hasSeenScanTutorial ? .scanner : .tutorial
     }
 
     private func save() {

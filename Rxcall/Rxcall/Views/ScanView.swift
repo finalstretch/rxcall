@@ -16,6 +16,7 @@ struct ScanView: View {
     let onFinish: (ScanResult) -> Void
     @Environment(\.dismiss) private var dismiss
     @State private var scan = ScanAccumulator()
+    @State private var showingHelp = false
     @State private var tick = Date()   // re-evaluates the stall check every second
     private let clock = Timer.publish(every: 1, on: .main, in: .common).autoconnect()
 
@@ -45,7 +46,13 @@ struct ScanView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    Button { showingHelp = true } label: {
+                        Label("How to scan", systemImage: "questionmark.circle")
+                    }
+                }
             }
+            .sheet(isPresented: $showingHelp) { ScanTutorialView {} }
             .onReceive(clock) { tick = $0 }
             .onChange(of: scan.isStable) { _, found in if found { haptic(.success) } }
             .onChange(of: scan.ndc) { _, v in if v != nil { haptic(.success) } }

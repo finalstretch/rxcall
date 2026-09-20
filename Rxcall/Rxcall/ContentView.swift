@@ -6,8 +6,10 @@ struct ContentView: View {
     @Query(sort: \Medication.addedAt) private var medications: [Medication]
     @AppStorage("hasSeenNotice") private var hasSeenNotice = false
 
-    @State private var showingAdd = false
-    @State private var addByScanning = false
+    /// How the add sheet was opened. Using the mode as the sheet's item means
+    /// the sheet is always built with the right value.
+    private enum AddMode: String, Identifiable { case typing, scanning; var id: String { rawValue } }
+    @State private var adding: AddMode?
     @State private var store = RecallStore()
 
     var body: some View {
@@ -22,7 +24,7 @@ struct ContentView: View {
             .navigationTitle("Rx-call")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
-                    Button { showingAdd = true } label: {
+                    Button { adding = .typing } label: {
                         Label("Add medication", systemImage: "plus")
                     }
                 }
@@ -44,15 +46,18 @@ struct ContentView: View {
                 #endif
             }
             .safeAreaInset(edge: .bottom) { footer }
-            .sheet(isPresented: $showingAdd, onDismiss: { addByScanning = false }) {
-                AddMedicationView(startScanning: addByScanning)
+            .sheet(item: $adding) { mode in
+                AddMedicationView(startScanning: mode == .scanning)
             }
             .sheet(isPresented: Binding(get: { !hasSeenNotice }, set: { _ in })) {
                 NoticeView { hasSeenNotice = true }
                     .interactiveDismissDisabled()
             }
             #if DEBUG
-            .task { if Demo.isActive { await store.checkAll(medications) } }
+            .task {
+                if Demo.showsTutorial { adding = .scanning }
+                if Demo.isActive { await store.checkAll(medications) }
+            }
             #endif
             .alert("Couldn't check", isPresented: Binding(get: { store.errorMessage != nil },
                                                           set: { if !$0 { store.errorMessage = nil } })) {
@@ -72,14 +77,13 @@ struct ContentView: View {
         } actions: {
             VStack(spacing: 12) {
                 Button {
-                    addByScanning = true
-                    showingAdd = true
+                    adding = .scanning
                 } label: {
                     Label("Scan a bottle", systemImage: "camera.viewfinder")
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                Button("Type a name instead") { showingAdd = true }
+                Button("Type a name instead") { adding = .typing }
             }
         }
     }
