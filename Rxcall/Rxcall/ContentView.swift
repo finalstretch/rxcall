@@ -7,12 +7,7 @@ struct ContentView: View {
     @AppStorage("hasSeenNotice") private var hasSeenNotice = false
 
     @State private var showingAdd = false
-    @State private var results: [PersistentIdentifier: [RecallMatch]] = [:]
-    @State private var checking = false
-    @State private var lastChecked: Date?
-    @State private var errorMessage: String?
-
-    private let client = OpenFDAClient()
+    @State private var store = RecallStore()
 
     var body: some View {
         NavigationStack {
@@ -38,13 +33,14 @@ struct ContentView: View {
                     .interactiveDismissDisabled()
             }
             #if DEBUG
-            .task { if Demo.isActive { await checkAll() } }
+            .task { if Demo.isActive { await store.checkAll(medications) } }
             #endif
-            .alert("Couldn't check", isPresented: Binding(get: { errorMessage != nil },
-                                                          set: { if !$0 { errorMessage = nil } })) {
+            .alert("Couldn't check", isPresented: Binding(get: { store.errorMessage != nil },
+                                                          set: { if !$0 { store.errorMessage = nil } })) {
                 Button("OK") {}
-            } message: { Text(errorMessage ?? "") }
+            } message: { Text(store.errorMessage ?? "") }
         }
+        .environment(store)
     }
 
     // MARK: - Pieces
@@ -63,24 +59,16 @@ struct ContentView: View {
     private var list: some View {
         List {
             ForEach(medications) { med in
-                Section {
-                    if let matches = results[med.persistentModelID] {
-                        if matches.isEmpty {
-                            Label("No ongoing recalls found", systemImage: "checkmark.circle")
-                                .foregroundStyle(.secondary)
-                        } else {
-                            ForEach(matches) { match in
-                                NavigationLink(value: match) {
-                                    RecallRow(match: match)
-                                }
-                            }
-                        }
-                    } else {
-                        Text("Not checked yet")
-                            .foregroundStyle(.secondary)
+                NavigationLink {
+                    MedicationDetailView(medication: med) { delete(med) }
+                } label: {
+                    MedicationRow(medication: med, matches: store.matches(for: med))
+                }
+                // Swipe from either edge to remove; a full swipe does it in one go.
+                .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                    Button(role: .destructive) { delete(med) } label: {
+                        Label("Remove", systemImage: "trash")
                     }
-                } header: {
-                    MedicationHeader(medication: med)
                 }
             }
             .onDelete(perform: delete)
@@ -88,15 +76,12 @@ struct ContentView: View {
             Section {
             } footer: {
                 VStack(alignment: .leading, spacing: 6) {
-                    if let lastChecked {
+                    if let lastChecked = store.lastChecked {
                         Text("Last checked \(lastChecked, format: .relative(presentation: .named)).")
                     }
                     Text("Not medical advice. Talk to your pharmacist before changing any medication.")
                 }
             }
-        }
-        .navigationDestination(for: RecallMatch.self) { match in
-            RecallDetailView(match: match)
         }
     }
 
@@ -104,9 +89,9 @@ struct ContentView: View {
     /// that at accessibility text sizes the results aren't pushed off screen.
     private var footer: some View {
         Button {
-            Task { await checkAll() }
+            Task { await store.checkAll(medications) }
         } label: {
-            if checking {
+            if store.isCheckingAny {
                 ProgressView().frame(maxWidth: .infinity)
             } else {
                 Text("Check for recalls").frame(maxWidth: .infinity)
@@ -114,76 +99,50 @@ struct ContentView: View {
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
-        .disabled(checking || medications.isEmpty)
+        .disabled(store.isCheckingAny || medications.isEmpty)
         .padding()
         .background(.bar)
     }
 
     // MARK: - Actions
 
-    private func checkAll() async {
-        checking = true
-        defer { checking = false }
-        var new: [PersistentIdentifier: [RecallMatch]] = [:]
-        for med in medications {
-            do {
-                let recalls = try await client.ongoingRecalls(for: med)
-                new[med.persistentModelID] = RecallMatcher.matches(for: med, in: recalls)
-            } catch {
-                errorMessage = "Couldn't reach the FDA's recall service. Check your connection and try again."
-                return
-            }
-        }
-        results = new
-        lastChecked = .now
-    }
-
     private func delete(at offsets: IndexSet) {
-        for i in offsets { context.delete(medications[i]) }
+        for i in offsets { delete(medications[i]) }
+    }
+
+    private func delete(_ medication: Medication) {
+        store.forget(medication)
+        context.delete(medication)
     }
 }
 
-private struct MedicationHeader: View {
+/// One medication in the list, with a one-line recall status.
+private struct MedicationRow: View {
     let medication: Medication
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(medication.name).font(.headline).textCase(nil)
-            if let generic = medication.genericName, generic.lowercased() != medication.name.lowercased() {
-                Text(generic).font(.subheadline).textCase(nil)
-            }
-            if medication.ndc != nil || medication.lotNumber != nil {
-                Text([medication.ndc.map { "NDC \($0)" }, medication.lotNumber.map { "Lot \($0)" }]
-                    .compactMap { $0 }.joined(separator: " · "))
-                    .font(.caption).textCase(nil)
-            }
-        }
-    }
-}
+    let matches: [RecallMatch]?
 
-private struct RecallRow: View {
-    let match: RecallMatch
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline) {
-                Image(systemName: match.confidence == .ndc ? "exclamationmark.triangle.fill" : "questionmark.circle")
-                    .accessibilityHidden(true)
-                Text(match.confidence.label).font(.subheadline.weight(.semibold))
+        VStack(alignment: .leading, spacing: 3) {
+            Text(medication.name).font(.headline)
+            if let generic = medication.genericName, generic.lowercased() != medication.name.lowercased() {
+                Text(generic).font(.subheadline).foregroundStyle(.secondary)
             }
-            Text(match.recall.productDescription)
+            Label(status.text, systemImage: status.symbol)
                 .font(.subheadline)
-                .lineLimit(2)
-            HStack {
-                Text(match.recall.classificationSummary.title)
-                if let d = match.recall.initiationDate {
-                    Text("·").accessibilityHidden(true)
-                    Text(d, format: .dateTime.month().day().year())
-                }
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
+                .foregroundStyle(status.warn ? Color.primary : Color.secondary)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
         .accessibilityElement(children: .combine)
+    }
+
+    private var status: (text: String, symbol: String, warn: Bool) {
+        guard let matches else { return ("Not checked yet", "circle.dotted", false) }
+        if matches.isEmpty { return ("No ongoing recalls", "checkmark.circle", false) }
+        if matches.contains(where: { $0.confidence == .ndc }) {
+            return ("Recall matches your bottle", "exclamationmark.triangle.fill", true)
+        }
+        let n = matches.count
+        return ("\(n) possible \(n == 1 ? "match" : "matches") — check lot numbers", "questionmark.circle", true)
     }
 }
 
