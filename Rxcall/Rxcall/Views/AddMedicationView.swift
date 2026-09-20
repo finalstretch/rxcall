@@ -2,17 +2,23 @@ import SwiftUI
 import SwiftData
 
 struct AddMedicationView: View {
-    /// Open straight into the camera — the empty state's primary action.
-    var startScanning = false
-
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var context
 
-    @State private var name = ""
+    @State private var name: String
     @State private var picked: DrugEntry?
-    @State private var ndc = ""
-    @State private var lot = ""
-    @State private var strength = ""
+    @State private var ndc: String
+    @State private var lot: String
+    @State private var strength: String
+
+    /// Empty form, or one pre-filled from a scan done before the form opened.
+    init(prefill: ScanResult? = nil) {
+        _name = State(initialValue: prefill?.entry?.displayName ?? "")
+        _picked = State(initialValue: prefill?.entry)
+        _ndc = State(initialValue: prefill?.ndc ?? "")
+        _lot = State(initialValue: prefill?.lotNumber ?? "")
+        _strength = State(initialValue: prefill?.strength ?? "")
+    }
     /// One sheet slot: the tutorial hands off to the camera via onDismiss,
     /// since presenting a new sheet while one is dismissing doesn't work.
     private enum Sheet: String, Identifiable { case tutorial, scanner; var id: String { rawValue } }
@@ -27,13 +33,44 @@ struct AddMedicationView: View {
     var body: some View {
         NavigationStack {
             Form {
+                // What's about to be added, so a scan result is unmissable.
+                if !name.trimmingCharacters(in: .whitespaces).isEmpty {
+                    Section {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Adding")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.secondary)
+                                .textCase(.uppercase)
+                            Text(name)
+                                .font(.title2.bold())
+                            if let generic = picked?.subtitle {
+                                Text(generic)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                            if !strength.isEmpty || !ndc.isEmpty || !lot.isEmpty {
+                                Text([strength.isEmpty ? nil : strength,
+                                      ndc.isEmpty ? nil : "NDC \(ndc)",
+                                      lot.isEmpty ? nil : "Lot \(lot)"]
+                                    .compactMap { $0 }.joined(separator: " · "))
+                                    .font(.footnote.monospaced())
+                                    .foregroundStyle(.secondary)
+                                    .padding(.top, 2)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                        .accessibilityElement(children: .combine)
+                    } footer: {
+                        Text("Check this matches the label, then tap Add.")
+                    }
+                }
                 Section {
                     Button {
                         startScan()
                     } label: {
                         HStack(spacing: 8) {
                             Image(systemName: "camera.viewfinder")
-                            Text("Scan the label with the camera")
+                            Text(picked == nil && name.isEmpty ? "Scan the label with the camera" : "Scan again")
                         }
                         .frame(maxWidth: .infinity)
                     }
@@ -48,7 +85,11 @@ struct AddMedicationView: View {
                     TextField("Medication name", text: $name)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                        .onChange(of: name) { _, _ in picked = nil }
+                        // Typing something different forgets the picked entry;
+                        // the scan or a suggestion setting the name doesn't.
+                        .onChange(of: name) { _, new in
+                            if let p = picked, p.displayName != new { picked = nil }
+                        }
                     ForEach(suggestions) { entry in
                         Button {
                             picked = entry
@@ -70,7 +111,7 @@ struct AddMedicationView: View {
                             .foregroundStyle(.secondary)
                     }
                 } header: {
-                    Text("Or type it")
+                    Text(name.isEmpty ? "Or type it" : "Name")
                 } footer: {
                     Text("Generic or brand name, as it's written on the label — for example “metformin” or “Synjardy”. Pick a suggestion if one matches; you can also just type a name.")
                 }
@@ -89,14 +130,6 @@ struct AddMedicationView: View {
             }
             .navigationTitle("Add medication")
             .navigationBarTitleDisplayMode(.inline)
-            // Keyed on the flag: the sheet can be built before the parent has
-            // set it, so a plain .task would see false and never re-run.
-            .task(id: startScanning) {
-                guard startScanning, sheet == nil else { return }
-                // Wait for this sheet to finish presenting before stacking another.
-                try? await Task.sleep(for: .milliseconds(450))
-                startScan()
-            }
             .sheet(item: $sheet, onDismiss: {
                 if scanAfterTutorial { scanAfterTutorial = false; sheet = .scanner }
             }) { which in
