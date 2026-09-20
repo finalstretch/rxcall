@@ -5,25 +5,55 @@ import SwiftData
 @Model
 final class Medication {
     var name: String
+    /// Generic name when the user picked a brand from the index, so recalls
+    /// listed under the ingredient are found too.
+    var genericName: String?
     /// NDC from the bottle, if the user entered one. Lets a recall be matched
     /// with certainty instead of by name.
     var ndc: String?
     /// Lot number from the bottle, if entered. Shown next to a recall's lot
     /// list so the user can compare; never parsed or matched automatically.
     var lotNumber: String?
+    /// Strength as printed, e.g. "500 mg". Used to rank recalls that mention it.
+    var strength: String?
     var addedAt: Date
 
-    init(name: String, ndc: String? = nil, lotNumber: String? = nil) {
+    /// Last successful check and what it returned, so the app has something to
+    /// show offline and can tell a new recall from one already seen.
+    var lastCheckedAt: Date?
+    var cachedRecallData: Data?
+    var seenRecallNumbers: [String] = []
+
+    /// Names worth searching the recall feed for.
+    var searchTerms: [String] {
+        guard let genericName, genericName.lowercased() != name.lowercased() else { return [name] }
+        return [name, genericName]
+    }
+
+    init(name: String, genericName: String? = nil, ndc: String? = nil, lotNumber: String? = nil, strength: String? = nil) {
         self.name = name
+        self.genericName = genericName
         self.ndc = ndc
         self.lotNumber = lotNumber
+        self.strength = strength
         self.addedAt = .now
+    }
+
+    var cachedRecalls: [Recall] {
+        get { cachedRecallData.flatMap { try? JSONDecoder().decode([Recall].self, from: $0) } ?? [] }
+        set { cachedRecallData = try? JSONEncoder().encode(newValue) }
+    }
+
+    func hasSeen(_ recall: Recall) -> Bool { seenRecallNumbers.contains(recall.recallNumber) }
+
+    func markSeen(_ recall: Recall) {
+        if !hasSeen(recall) { seenRecallNumbers.append(recall.recallNumber) }
     }
 }
 
 /// One record from the openFDA drug enforcement API.
 /// Field names mirror the API; see docs/openfda-notes.md for what they contain.
-struct Recall: Decodable, Identifiable, Hashable {
+struct Recall: Codable, Identifiable, Hashable {
     let recallNumber: String
     let status: String
     let classification: String
@@ -36,7 +66,7 @@ struct Recall: Decodable, Identifiable, Hashable {
     let distributionPattern: String?
     let openfda: OpenFDA?
 
-    struct OpenFDA: Decodable, Hashable {
+    struct OpenFDA: Codable, Hashable {
         let brandName: [String]?
         let genericName: [String]?
         let productNdc: [String]?
@@ -130,8 +160,28 @@ enum MatchConfidence: Comparable {
     }
 }
 
+/// Navigation value for a recall opened from a medication's screen.
+struct RecallRoute: Hashable {
+    let match: RecallMatch
+    let medication: Medication
+}
+
 struct RecallMatch: Identifiable, Hashable {
     let recall: Recall
     let confidence: MatchConfidence
+    /// The recall text mentions the strength on the person's bottle.
+    var mentionsStrength = false
     var id: String { recall.id }
+}
+
+extension Recall {
+    /// Class I = 0 … unclassified = 3, for sorting most serious first.
+    var severityRank: Int {
+        switch classification {
+        case "Class I": return 0
+        case "Class II": return 1
+        case "Class III": return 2
+        default: return 3
+        }
+    }
 }

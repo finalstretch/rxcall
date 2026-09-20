@@ -2,7 +2,24 @@ import SwiftUI
 
 struct RecallDetailView: View {
     let match: RecallMatch
+    var medication: Medication? = nil
     private var recall: Recall { match.recall }
+
+    /// Plain text for handing to a family member or pharmacist.
+    private var shareText: String {
+        var lines = ["FDA drug recall — \(recall.classificationSummary.title) (\(recall.classification))", ""]
+        lines.append("Product: \(recall.productDescription)")
+        if let codes = recall.codeInfo, !codes.isEmpty { lines.append("Lots: \(codes)") }
+        lines.append("Reason: \(recall.reasonForRecall)")
+        lines.append("Firm: \(recall.recallingFirm)")
+        if let d = recall.initiationDate { lines.append("Recall started: \(d.formatted(date: .long, time: .omitted))") }
+        lines.append("Recall number: \(recall.recallNumber)")
+        if let lot = medication?.lotNumber { lines.append("My bottle's lot: \(lot)") }
+        lines.append("")
+        lines.append("FDA record: https://www.accessdata.fda.gov/scripts/ires/index.cfm?Product=\(recall.recallNumber)")
+        lines.append("Shared from Rx-call. Not medical advice — check with a pharmacist.")
+        return lines.joined(separator: "\n")
+    }
 
     var body: some View {
         List {
@@ -34,6 +51,10 @@ struct RecallDetailView: View {
                     Text(codes)
                         .font(.body.monospaced())
                         .textSelection(.enabled)
+                    if let lot = medication?.lotNumber {
+                        LabeledContent("Your bottle", value: lot)
+                            .font(.body.monospaced())
+                    }
                     Text("Compare these with the lot number printed on your bottle.")
                         .font(.footnote)
                         .foregroundStyle(.secondary)
@@ -48,11 +69,19 @@ struct RecallDetailView: View {
             }
 
             Section("Why") {
-                Text(recall.reasonForRecall).textSelection(.enabled)
+                if let plain = RecallGlossary.explanation(for: recall.reasonForRecall) {
+                    Text(plain)
+                    Text(recall.reasonForRecall)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .textSelection(.enabled)
+                } else {
+                    Text(recall.reasonForRecall).textSelection(.enabled)
+                }
             }
 
             Section("What to do") {
-                Text("Don't stop taking a medication on your own. Take your bottle to your pharmacist, or call them, and ask whether it's part of this recall and what to do next.")
+                Text(RecallGlossary.whatToDo(for: recall.classification))
             }
 
             Section("Details") {
@@ -74,5 +103,10 @@ struct RecallDetailView: View {
         }
         .navigationTitle("Recall")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ShareLink(item: shareText, subject: Text("FDA recall: \(medication?.name ?? "medication")")) {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+        }
     }
 }

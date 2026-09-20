@@ -37,6 +37,18 @@ struct OpenFDAClient {
         return try decoder.decode(Envelope.self, from: data).results
     }
 
+    /// Ongoing recalls mentioning any of the medication's names, de-duplicated.
+    func ongoingRecalls(for medication: Medication) async throws -> [Recall] {
+        var seen = Set<String>()
+        var all: [Recall] = []
+        for term in medication.searchTerms {
+            for recall in try await ongoingRecalls(mentioning: term) where seen.insert(recall.id).inserted {
+                all.append(recall)
+            }
+        }
+        return all
+    }
+
     private struct Envelope: Decodable {
         let results: [Recall]
     }
@@ -45,24 +57,46 @@ struct OpenFDAClient {
 /// Matches recalls against a medication and grades the confidence.
 enum RecallMatcher {
     static func matches(for medication: Medication, in recalls: [Recall]) -> [RecallMatch] {
-        let userNDC = medication.ndc.map(normalizeNDC)
+        let userNDCs = medication.ndc.map(candidateNDCs) ?? []
+        let strength = medication.strength.map(normalizeStrength)
         return recalls.map { recall in
             let confidence: MatchConfidence
-            if let userNDC, recall.allNDCs.contains(userNDC) {
+            if !userNDCs.isEmpty, !recall.allNDCs.isDisjoint(with: userNDCs) {
                 confidence = .ndc
             } else {
                 confidence = .name
             }
-            return RecallMatch(recall: recall, confidence: confidence)
+            let mentions = strength.map { normalizeStrength(recall.productDescription).contains($0) } ?? false
+            return RecallMatch(recall: recall, confidence: confidence, mentionsStrength: mentions)
         }
-        .sorted { ($0.confidence, $0.recall.recallInitiationDate) > ($1.confidence, $1.recall.recallInitiationDate) }
+        // Certain matches first; then ones naming the bottle's strength; then
+        // most serious; then newest.
+        .sorted {
+            ($0.confidence == .ndc ? 0 : 1, $0.mentionsStrength ? 0 : 1, $0.recall.severityRank, $1.recall.recallInitiationDate)
+            < ($1.confidence == .ndc ? 0 : 1, $1.mentionsStrength ? 0 : 1, $1.recall.severityRank, $0.recall.recallInitiationDate)
+        }
     }
 
-    /// Reduces a user-entered NDC (any of the common 10- or 11-digit layouts,
-    /// with or without a package segment) to labeler-product form.
-    static func normalizeNDC(_ raw: String) -> String {
+    /// "500 MG", "500mg", "500 mg" all become "500mg" for comparison.
+    static func normalizeStrength(_ text: String) -> String {
+        text.lowercased().replacingOccurrences(of: #"\s+"#, with: "", options: .regularExpression)
+    }
+
+    /// Labeler-product forms an entered NDC could correspond to, for comparing
+    /// against openFDA's hyphenated `product_ndc`.
+    ///
+    /// Typed with hyphens ("68462-521-90") the split is known. Read from a
+    /// barcode it's ten bare digits, and the FDA allows three layouts
+    /// (4-4-2, 5-3-2, 5-4-1), so all three splits are tried.
+    static func candidateNDCs(_ raw: String) -> Set<String> {
         let parts = raw.split(separator: "-").map(String.init)
-        guard parts.count >= 2 else { return raw }
-        return "\(parts[0])-\(parts[1])"
+        if parts.count >= 2 { return ["\(parts[0])-\(parts[1])"] }
+        let d = raw.filter(\.isNumber)
+        guard d.count == 10 else { return [raw] }
+        return [
+            "\(d.prefix(4))-\(d.dropFirst(4).prefix(4))",
+            "\(d.prefix(5))-\(d.dropFirst(5).prefix(3))",
+            "\(d.prefix(5))-\(d.dropFirst(5).prefix(4))",
+        ]
     }
 }
