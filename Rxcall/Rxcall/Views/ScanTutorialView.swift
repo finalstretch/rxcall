@@ -39,11 +39,14 @@ struct ScanTutorialView: View {
                             ForEach(steps.indices, id: \.self) { i in
                                 caption(i)
                                     .opacity(i == step ? 1 : 0)
+                                    // Out quickly, then in after a beat, so the
+                                    // two captions never show on top of each other.
+                                    .animation(i == step ? .easeIn(duration: 0.3).delay(0.2)
+                                                         : .easeOut(duration: 0.15), value: step)
                                     .accessibilityHidden(i != step)
                             }
                         }
                         .padding(.horizontal, 24)
-                        .animation(.easeInOut(duration: 0.4), value: step)
                         .accessibilityElement(children: .contain)
                         .accessibilityAddTraits(.updatesFrequently)
 
