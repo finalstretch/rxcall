@@ -111,6 +111,10 @@ struct ScanView: View {
             return ("All set — tap Use.", "checkmark.circle.fill", false)
         }
         if scan.isStalled {
+            if scan.isStable && scan.lotNumber == nil {
+                return ("Pharmacy labels usually don't show the lot number. Check the box or the manufacturer's bottle — it's stamped near the expiry date, often on the bottom.",
+                        "shippingbox", true)
+            }
             if scan.isStable {
                 return ("Nothing new here. Try the other side of the label, or tilt the bottle away from the glare.",
                         "arrow.trianglehead.2.clockwise.rotate.90", true)

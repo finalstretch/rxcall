@@ -47,7 +47,7 @@ struct MedicationDetailView: View {
             } header: {
                 Text("From the bottle")
             } footer: {
-                Text("With the NDC, Rx-call can tell you a recall definitely covers your bottle. The lot number is shown next to each recall's lot list so you can compare.")
+                Text("With the NDC, Rx-call can tell you a recall definitely covers your bottle. The lot number is shown next to each recall's lot list so you can compare. Pharmacy labels usually don't print the lot — look on the box or the manufacturer's bottle near the expiry date, or ask your pharmacist.")
             }
 
             Section {

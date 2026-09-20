@@ -15,7 +15,8 @@ struct ScanTutorialView: View {
     private let steps: [(title: String, detail: String)] = [
         ("Hold the bottle up", "Point the camera at the label, about a hand's width away."),
         ("Turn it slowly", "Rx-call reads the label as it comes into view and locks in the name."),
-        ("Keep turning", "The NDC and lot number are usually on the other side, near the barcode."),
+        ("Keep turning", "The NDC is usually on the other side of the label, near the barcode."),
+        ("Check the box too", "Pharmacy labels often leave out the lot number. It's stamped on the box or the manufacturer's bottle, next to the expiry date."),
         ("Tap Use", "That's it. You can fix anything by hand on the next screen."),
     ]
 
@@ -119,7 +120,7 @@ struct ScanTutorialView: View {
 
     private func loop() async {
         while !Task.isCancelled {
-            try? await Task.sleep(for: .seconds(step == 0 ? 2.2 : 3.2))
+            try? await Task.sleep(for: .seconds(step == 0 ? 2.2 : (step == 3 ? 4 : 3.2)))
             // Hands off for a while after a swipe or tap.
             if let t = lastManualChange, Date().timeIntervalSince(t) < 7 { continue }
             withAnimation(.easeInOut(duration: 0.8)) { step = (step + 1) % steps.count }
@@ -152,17 +153,22 @@ private struct BottleScene: View {
                 ViewfinderCorners()
                     .stroke(Color.accentColor, style: StrokeStyle(lineWidth: 5, lineCap: .round))
                     .padding(w * 0.04)
-                    .opacity(step == 3 ? 0.35 : 1)
+                    .opacity(step == 4 ? 0.35 : 1)
 
                 Bottle(labelOffset: labelOffset, width: w * 0.42)
                     .frame(height: w * 0.62)
-                    .offset(y: w * 0.03)
+                    .offset(x: step >= 3 ? -w * 0.2 : 0, y: w * 0.03)
+
+                // the box, with the lot stamped by the expiry
+                MedicineBox(width: w * 0.34)
+                    .offset(x: step >= 3 ? w * 0.22 : w * 0.7, y: w * 0.08)
+                    .opacity(step >= 3 ? 1 : 0)
 
                 // chips
                 HStack(spacing: 8) {
                     chip("Name", done: step >= 1)
                     chip("NDC", done: step >= 2)
-                    chip("Lot", done: step >= 2)
+                    chip("Lot", done: step >= 3)
                 }
                 .frame(maxHeight: .infinity, alignment: .top)
                 .padding(.top, w * 0.10)
@@ -173,8 +179,8 @@ private struct BottleScene: View {
                     .padding(.horizontal, 22).padding(.vertical, 12)
                     .background(Color.accentColor, in: Capsule())
                     .foregroundStyle(.white)
-                    .scaleEffect(step == 3 ? 1.08 : 0.92)
-                    .opacity(step == 3 ? 1 : 0.35)
+                    .scaleEffect(step == 4 ? 1.08 : 0.92)
+                    .opacity(step == 4 ? 1 : 0.35)
                     .frame(maxHeight: .infinity, alignment: .bottom)
                     .padding(.bottom, w * 0.08)
 
@@ -211,6 +217,39 @@ private struct BottleScene: View {
     }
 }
 
+/// A medicine box, bottom flap showing the stamped lot and expiry.
+private struct MedicineBox: View {
+    let width: CGFloat
+    var body: some View {
+        VStack(spacing: 0) {
+            RoundedRectangle(cornerRadius: 6)
+                .fill(Color(.systemGray5))
+                .overlay(
+                    VStack(spacing: 3) {
+                        Text("METFORMIN").font(.system(size: width * 0.085, weight: .heavy))
+                        Text("HCl ER 500 mg").font(.system(size: width * 0.07))
+                    }
+                    .foregroundStyle(.black.opacity(0.7))
+                )
+                .frame(height: width * 0.9)
+            Rectangle()
+                .fill(Color(.systemGray4))
+                .overlay(
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("LOT 17232088")
+                        Text("EXP 03/2027")
+                    }
+                    .font(.system(size: width * 0.085, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.black.opacity(0.75))
+                )
+                .frame(height: width * 0.36)
+                .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 6, bottomTrailingRadius: 6))
+        }
+        .frame(width: width)
+        .shadow(color: .black.opacity(0.12), radius: 6, y: 3)
+    }
+}
+
 /// A pill bottle. The label's content is offset horizontally inside a mask so
 /// it looks like the bottle is turning; a gradient overlay gives it a curve.
 private struct Bottle: View {
@@ -244,7 +283,7 @@ private struct Bottle: View {
             Color.white
             HStack(spacing: sideWidth * 0.35) {
                 labelSide(["RX #1234567", "METFORMIN", "HCL ER 500 MG", "TAKE 1 TABLET", "TWICE DAILY"], bold: 1)
-                labelSide(["QTY 60  RF 2", "NDC 68462-", "0521-90", "LOT 17232088", "▌▌▌▌▌▌▌▌"], bold: nil)
+                labelSide(["QTY 60  RF 2", "NDC 68462-", "0521-90", "DR J SMITH", "▌▌▌▌▌▌▌▌"], bold: nil)
             }
             .fixedSize()
             // The HStack is centred on the gap; shift by half a span so
