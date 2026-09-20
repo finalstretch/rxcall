@@ -20,6 +20,7 @@ struct ContentView: View {
     }
     @State private var sheet: Sheet?
     @State private var nextSheet: Sheet?
+    @State private var confirmingRemoveAll = false
     @AppStorage("hasSeenScanTutorial") private var hasSeenScanTutorial = false
     @State private var store = RecallStore()
 
@@ -43,6 +44,17 @@ struct ContentView: View {
                     .onAppear { store.markSeen(route.match, for: route.medication) }
             }
             .toolbar {
+                if !medications.isEmpty {
+                    ToolbarItem(placement: .primaryAction) {
+                        Menu {
+                            Button(role: .destructive) { confirmingRemoveAll = true } label: {
+                                Label("Remove all medications", systemImage: "trash")
+                            }
+                        } label: {
+                            Label("More", systemImage: "ellipsis.circle")
+                        }
+                    }
+                }
                 #if DEBUG
                 ToolbarItem(placement: .secondaryAction) {
                     Button("Debug: run background check") {
@@ -88,6 +100,16 @@ struct ContentView: View {
                 if Demo.isActive { await store.checkAll(medications) }
             }
             #endif
+            .confirmationDialog(
+                "Remove all \(medications.count) medication\(medications.count == 1 ? "" : "s")?",
+                isPresented: $confirmingRemoveAll, titleVisibility: .visible
+            ) {
+                Button("Remove all", role: .destructive) {
+                    for med in medications { context.delete(med) }
+                }
+            } message: {
+                Text("Rx-call will stop checking recalls for them. This can't be undone, but you can add them again any time.")
+            }
             .alert("Couldn't check", isPresented: Binding(get: { store.errorMessage != nil },
                                                           set: { if !$0 { store.errorMessage = nil } })) {
                 Button("OK") {}
