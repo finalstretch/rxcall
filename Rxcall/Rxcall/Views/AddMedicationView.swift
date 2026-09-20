@@ -31,8 +31,18 @@ struct AddMedicationView: View {
                     Button {
                         startScan()
                     } label: {
-                        Label("Scan the label with the camera", systemImage: "camera.viewfinder")
+                        HStack(spacing: 8) {
+                            Image(systemName: "camera.viewfinder")
+                            Text("Scan the label with the camera")
+                        }
+                        .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                } footer: {
+                    Text("Reads the name, strength, NDC, and lot number off the bottle or box.")
                 }
                 Section {
                     TextField("Medication name", text: $name)
@@ -59,6 +69,8 @@ struct AddMedicationView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
+                } header: {
+                    Text("Or type it")
                 } footer: {
                     Text("Generic or brand name, as it's written on the label — for example “metformin” or “Synjardy”. Pick a suggestion if one matches; you can also just type a name.")
                 }
