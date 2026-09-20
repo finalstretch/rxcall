@@ -1,3 +1,5 @@
+<img src="docs/icon.png" width="88" align="left" alt="Rx-call icon" hspace="14">
+
 # Rx-call
 
 **An iOS app that watches the FDA's drug recall feed for the medications you actually take — and tells you, in plain language, whether the bottle on your counter is affected.**
