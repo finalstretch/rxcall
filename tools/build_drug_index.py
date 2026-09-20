@@ -61,6 +61,35 @@ RETAILERS = {"walgreens", "cvs", "cvs pharmacy", "rite aid", "kroger", "walmart"
              "leader", "premier value", "sunmark", "health mart", "healthmart", "medline",
              "mckesson", "cardinal health", "major", "rugby", "geri-care", "gericare"}
 
+# Words that describe what a product does or who it's for rather than naming it.
+# A "brand" made only of these ("Pain Reliever", "Extra Strength Antacid") is a
+# store-label description, not a name anyone would search for.
+DESCRIPTIVE = {"pain", "reliever", "relief", "extra", "strength", "maximum", "regular", "antacid",
+               "tablets", "tablet", "caplets", "gas", "cold", "flu", "allergy", "sinus", "sleep",
+               "aid", "cough", "nighttime", "daytime", "night", "day", "time", "childrens",
+               "children's", "children", "infants", "infant", "adult", "adults", "fever", "reducer",
+               "headache", "migraine", "nasal", "spray", "eye", "drops", "drop", "ear", "stomach",
+               "heartburn", "acid", "laxative", "stool", "softener", "fiber", "sleep", "multi",
+               "symptom", "severe", "non", "drowsy", "chewable", "liquid", "gels", "gel", "capsules",
+               "softgels", "junior", "and", "&", "plus", "with", "for", "the", "of", "formula",
+               "original", "fast", "acting", "rapid", "release", "hour", "hr", "pm", "am", "mg",
+               "coated", "enteric", "low", "dose", "dye", "free", "concentrated", "oral", "suspension",
+               "mucus", "chest", "congestion", "decongestant", "antihistamine", "motion", "sickness",
+               "nausea", "anti", "diarrheal", "itch", "allergies", "care", "health", "pharmacy",
+               "brand", "value", "premium", "quality", "choice", "basic", "signature", "select"}
+
+def is_descriptive(brand, generic):
+    words = re.findall(r"[a-z0-9&']+", brand.lower())
+    generic_words = set(re.findall(r"[a-z0-9]+", generic))
+    return all(w in DESCRIPTIVE or w in generic_words or w.isdigit() for w in words)
+
+def strip_retailer(brand):
+    low = brand.lower()
+    for r in sorted(RETAILERS, key=len, reverse=True):
+        if low.startswith(r + " "):
+            return brand[len(r):].strip(" -:")
+    return brand
+
 def clean_generic(g):
     ingredients = re.split(r",|/|\band\b", g.lower())
     out = []
@@ -87,6 +116,9 @@ def main():
         brand, generic = tidy(r.get("brand_name")), clean_generic(tidy(r.get("generic_name")))
         if not generic:
             continue
+        brand = strip_retailer(brand)
+        if is_descriptive(brand, generic):
+            brand = ""
         # A "brand" that's just the generic (with or without salt/form words),
         # as repackagers often list, isn't a brand.
         b = clean_generic(brand)
