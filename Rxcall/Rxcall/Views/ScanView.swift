@@ -156,16 +156,29 @@ struct ScanView: View {
             slot("Lot number", value: scan.lotNumber, found: scan.lotNumber != nil)
 
             // Runners-up with real support, so a wrong guess is one tap from fixed.
+            // Most are the same drug under another brand, or a combination that
+            // contains it — say which, so the list doesn't look like duplicates.
             let alternatives = scan.candidates.dropFirst().filter { $0.votes >= 2 }.prefix(3)
-            if !alternatives.isEmpty {
-                Text("Or did you mean").font(.caption).foregroundStyle(.secondary).padding(.top, 4)
-                ForEach(alternatives) { c in
-                    Button(c.entry.displayName) {
-                        onFinish(ScanResult(entry: c.entry, ndc: scan.ndc, lotNumber: scan.lotNumber, strength: scan.strength))
-                        dismiss()
+            if !alternatives.isEmpty, let leader = scan.leader {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Not \(leader.displayName)? It could also be:")
+                        .font(.caption).foregroundStyle(.secondary)
+                    ForEach(alternatives) { c in
+                        Button {
+                            onFinish(ScanResult(entry: c.entry, ndc: scan.ndc, lotNumber: scan.lotNumber, strength: scan.strength))
+                            dismiss()
+                        } label: {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(c.entry.displayName).font(.subheadline)
+                                Text(relationship(of: c.entry, to: leader))
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
                     }
-                    .font(.subheadline)
+                    Text("Pick whichever name is printed on your label.")
+                        .font(.caption2).foregroundStyle(.tertiary)
                 }
+                .padding(.top, 4)
             }
 
             Button {
@@ -181,6 +194,22 @@ struct ScanView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
         .background(.bar)
+    }
+
+    /// "Same drug, sold as Riomet" / "Contains metformin plus sitagliptin" / the generic.
+    private func relationship(of entry: DrugEntry, to leader: DrugEntry) -> String {
+        let a = entry.generic.lowercased(), b = leader.generic.lowercased()
+        if a == b {
+            return entry.brand == nil ? "Same drug — the generic name"
+                                      : "Same drug, sold under this brand"
+        }
+        let leaderIngredient = leader.searchTerms.last?.lowercased() ?? b
+        if a.contains(leaderIngredient) {
+            let others = a.components(separatedBy: " and ").filter { $0 != leaderIngredient }
+            return others.isEmpty ? "Contains \(leaderIngredient)"
+                                  : "Contains \(leaderIngredient) plus \(others.joined(separator: ", "))"
+        }
+        return entry.subtitle ?? "A different drug"
     }
 
     private var useLabel: String {
