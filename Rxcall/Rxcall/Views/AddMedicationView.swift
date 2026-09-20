@@ -79,7 +79,11 @@ struct AddMedicationView: View {
                     TextField("Medication name", text: $name)
                         .textInputAutocapitalization(.never)
                         .autocorrectionDisabled()
-                        .onChange(of: name) { _, _ in picked = nil }
+                        // Typing something different forgets the picked entry;
+                        // the scan or a suggestion setting the name doesn't.
+                        .onChange(of: name) { _, new in
+                            if let p = picked, p.displayName != new { picked = nil }
+                        }
                     ForEach(suggestions) { entry in
                         Button {
                             picked = entry
@@ -101,7 +105,7 @@ struct AddMedicationView: View {
                             .foregroundStyle(.secondary)
                     }
                 } header: {
-                    Text("Or type it")
+                    Text(name.isEmpty ? "Or type it" : "Name")
                 } footer: {
                     Text("Generic or brand name, as it's written on the label — for example “metformin” or “Synjardy”. Pick a suggestion if one matches; you can also just type a name.")
                 }
