@@ -32,11 +32,6 @@ struct ContentView: View {
                     .onAppear { store.markSeen(route.match, for: route.medication) }
             }
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button { adding = .typing } label: {
-                        Label("Add medication", systemImage: "plus")
-                    }
-                }
                 #if DEBUG
                 ToolbarItem(placement: .secondaryAction) {
                     Button("Debug: run background check") {
@@ -124,21 +119,30 @@ struct ContentView: View {
         }
     }
 
-    /// Only the button is pinned. Everything else scrolls with the list so
+    /// Only the buttons are pinned. Everything else scrolls with the list so
     /// that at accessibility text sizes the results aren't pushed off screen.
     private var footer: some View {
-        Button {
-            Task { await store.checkAll(medications) }
-        } label: {
-            if store.isCheckingAny {
-                ProgressView().frame(maxWidth: .infinity)
-            } else {
-                Text("Check for recalls").frame(maxWidth: .infinity)
+        HStack(spacing: 12) {
+            Button {
+                Task { await store.checkAll(medications) }
+            } label: {
+                if store.isCheckingAny {
+                    ProgressView().frame(maxWidth: .infinity)
+                } else {
+                    Text("Check for recalls").frame(maxWidth: .infinity)
+                }
             }
+            .disabled(store.isCheckingAny || medications.isEmpty)
+
+            Button { adding = .typing } label: {
+                Image(systemName: "plus")
+                    .font(.title3.weight(.semibold))
+                    .frame(minWidth: 28)
+            }
+            .accessibilityLabel("Add medication")
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
-        .disabled(store.isCheckingAny || medications.isEmpty)
         .padding()
         .background(.bar)
     }
