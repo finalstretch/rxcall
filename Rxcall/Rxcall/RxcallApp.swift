@@ -37,6 +37,9 @@ struct RxcallApp: App {
 enum Demo {
     static var isActive: Bool { medicationNames != nil }
 
+    /// `-tutorial`: forget that the scan tutorial was seen and open the scan flow.
+    static var showsTutorial: Bool { ProcessInfo.processInfo.arguments.contains("-tutorial") }
+
     static var medicationNames: [String]? {
         let args = ProcessInfo.processInfo.arguments
         guard let i = args.firstIndex(of: "-demo"), i + 1 < args.count else { return nil }
@@ -45,13 +48,19 @@ enum Demo {
 
     @MainActor
     static func seedIfRequested(into container: ModelContainer) {
+        if showsTutorial {
+            UserDefaults.standard.set(true, forKey: "hasSeenNotice")
+            UserDefaults.standard.set(false, forKey: "hasSeenScanTutorial")
+        }
         guard let names = medicationNames else { return }
         UserDefaults.standard.set(true, forKey: "hasSeenNotice")
         let context = container.mainContext
         let existing = (try? context.fetch(FetchDescriptor<Medication>())) ?? []
-        for name in names where !existing.contains(where: { $0.name == name }) {
+        for name in names {
             // Resolve through the index the way picking a suggestion would.
             let entry = DrugIndex.shared.suggestions(for: name, limit: 1).first
+            let resolved = entry?.displayName ?? name
+            if existing.contains(where: { $0.name.caseInsensitiveCompare(resolved) == .orderedSame }) { continue }
             context.insert(Medication(name: entry?.displayName ?? name,
                                       genericName: entry?.searchTerms.last))
         }

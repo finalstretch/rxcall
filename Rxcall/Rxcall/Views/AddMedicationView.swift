@@ -13,7 +13,12 @@ struct AddMedicationView: View {
     @State private var ndc = ""
     @State private var lot = ""
     @State private var strength = ""
-    @State private var scanning = false
+    /// One sheet slot: the tutorial hands off to the camera via onDismiss,
+    /// since presenting a new sheet while one is dismissing doesn't work.
+    private enum Sheet: String, Identifiable { case tutorial, scanner; var id: String { rawValue } }
+    @State private var sheet: Sheet?
+    @State private var scanAfterTutorial = false
+    @AppStorage("hasSeenScanTutorial") private var hasSeenScanTutorial = false
 
     private var suggestions: [DrugEntry] {
         picked == nil ? DrugIndex.shared.suggestions(for: name) : []
@@ -24,10 +29,20 @@ struct AddMedicationView: View {
             Form {
                 Section {
                     Button {
-                        scanning = true
+                        startScan()
                     } label: {
-                        Label("Scan the label with the camera", systemImage: "camera.viewfinder")
+                        HStack(spacing: 8) {
+                            Image(systemName: "camera.viewfinder")
+                            Text("Scan the label with the camera")
+                        }
+                        .frame(maxWidth: .infinity)
                     }
+                    .buttonStyle(.borderedProminent)
+                    .controlSize(.large)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+                } footer: {
+                    Text("Reads the name, strength, NDC, and lot number off the bottle or box.")
                 }
                 Section {
                     TextField("Medication name", text: $name)
@@ -54,6 +69,8 @@ struct AddMedicationView: View {
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
+                } header: {
+                    Text("Or type it")
                 } footer: {
                     Text("Generic or brand name, as it's written on the label — for example “metformin” or “Synjardy”. Pick a suggestion if one matches; you can also just type a name.")
                 }
@@ -67,21 +84,30 @@ struct AddMedicationView: View {
                 } header: {
                     Text("From the bottle")
                 } footer: {
-                    Text("The NDC is a code like 68462-521-90 printed on the label. Adding it lets Rx-call tell you a recall definitely covers your bottle, not just your medication.")
+                    Text("The NDC is a code like 68462-521-90 — on the pharmacy label if you're lucky, otherwise on the box by the barcode. Adding it lets Rx-call tell you a recall definitely covers your bottle, not just your medication.")
                 }
             }
             .navigationTitle("Add medication")
             .navigationBarTitleDisplayMode(.inline)
-            .onAppear { if startScanning { scanning = true } }
-            .sheet(isPresented: $scanning) {
-                ScanView { result in
-                    if let entry = result.entry {
-                        picked = entry
-                        name = entry.displayName
+            // Keyed on the flag: the sheet can be built before the parent has
+            // set it, so a plain .task would see false and never re-run.
+            .task(id: startScanning) {
+                guard startScanning, sheet == nil else { return }
+                // Wait for this sheet to finish presenting before stacking another.
+                try? await Task.sleep(for: .milliseconds(450))
+                startScan()
+            }
+            .sheet(item: $sheet, onDismiss: {
+                if scanAfterTutorial { scanAfterTutorial = false; sheet = .scanner }
+            }) { which in
+                switch which {
+                case .tutorial:
+                    ScanTutorialView {
+                        hasSeenScanTutorial = true
+                        scanAfterTutorial = true
                     }
-                    if let code = result.ndc, ndc.isEmpty { ndc = code }
-                    if let code = result.lotNumber, lot.isEmpty { lot = code }
-                    if let s = result.strength, strength.isEmpty { strength = s }
+                case .scanner:
+                    scanner
                 }
             }
             .toolbar {
@@ -94,6 +120,23 @@ struct AddMedicationView: View {
                 }
             }
         }
+    }
+
+    private var scanner: some View {
+        ScanView { result in
+            if let entry = result.entry {
+                picked = entry
+                name = entry.displayName
+            }
+            if let code = result.ndc, ndc.isEmpty { ndc = code }
+            if let code = result.lotNumber, lot.isEmpty { lot = code }
+            if let s = result.strength, strength.isEmpty { strength = s }
+        }
+    }
+
+    /// First time through, show how it works; after that, straight to the camera.
+    private func startScan() {
+        sheet = hasSeenScanTutorial ? .scanner : .tutorial
     }
 
     private func save() {

@@ -82,6 +82,7 @@ final class ScanAccumulator {
 
         for code in Self.ndcs(in: text) { ndcVotes[code, default: 0] += 1 }
         for code in barcodes.compactMap(Self.ndc(fromBarcode:)) { ndcVotes[code, default: 0] += 3 }
+        for code in barcodes.compactMap(Self.lot(fromBarcode:)) { lotVotes[code, default: 0] += 3 }
         for lot in Self.lots(in: text) { lotVotes[lot, default: 0] += 1 }
         for st in Self.strengths(in: text) { strengthVotes[st, default: 0] += 1 }
 
@@ -114,9 +115,32 @@ final class ScanAccumulator {
             }
     }
 
-    /// "LOT 17232088", "Lot#: AC-016633", "LOT: J4H077".
+    /// "LOT 17232088", "Lot#: AC-016633", "LOT: J4H077" — and, since boxes
+    /// often stamp the lot next to the expiry with no word at all, a code of
+    /// 5+ characters immediately before or after "EXP …".
     static func lots(in text: String) -> [String] {
-        matches(of: #"(?i)\blot\s*(?:#|no\.?|number|:)?\s*:?\s*([A-Z0-9][A-Z0-9-]{3,})"#, in: text, group: 1)
+        var found = matches(of: #"(?i)\blot\s*(?:#|no\.?|number|:)?\s*:?\s*([A-Z0-9][A-Z0-9-]{3,})"#, in: text, group: 1)
+        if found.isEmpty {
+            found += matches(of: #"(?i)\b([A-Z0-9][A-Z0-9-]{4,})\s+EXP\b"#, in: text, group: 1)
+            found += matches(of: #"(?i)\bEXP(?:\.|:|IRES|IRY)?\s*:?\s*[A-Z0-9/-]+\s+(?:LOT\s*:?\s*)?([A-Z0-9][A-Z0-9-]{4,})\b"#, in: text, group: 1)
+        }
+        // A lot is never a plain date or a strength.
+        return found.filter { !$0.contains("/") && $0.range(of: #"^\d{1,4}(MG|MCG|ML)$"#, options: .regularExpression) == nil }
+    }
+
+    /// The lot in a GS1 barcode: application identifier (10). Data Matrix
+    /// codes on prescription packaging usually carry (01) GTIN, (17) expiry,
+    /// and (10) lot, either bracketed or run together with the lot last.
+    static func lot(fromBarcode payload: String) -> String? {
+        if let r = payload.range(of: #"\(10\)([A-Za-z0-9-]{2,20})"#, options: .regularExpression) {
+            return String(payload[r].dropFirst(4)).uppercased()
+        }
+        // Unbracketed: "01" + 14-digit GTIN, optional "17" + 6-digit expiry, "10" + lot.
+        if let r = payload.range(of: #"^01\d{14}(?:17\d{6})?10"#, options: .regularExpression) {
+            let lot = payload[r.upperBound...].split(separator: "\u{1D}").first ?? ""
+            return lot.isEmpty ? nil : String(lot).uppercased()
+        }
+        return nil
     }
 
     /// The NDC inside a drug barcode, when the payload is one of the layouts
@@ -131,9 +155,10 @@ final class ScanAccumulator {
         if digits.count == 14, digits.hasPrefix("003") {
             return String(digits.dropFirst(3).prefix(10))
         }
-        // GS1 application identifier form: (01)00312345678906...
-        if let range = payload.range(of: #"\(01\)(\d{14})"#, options: .regularExpression) {
-            return ndc(fromBarcode: String(payload[range].dropFirst(4)))
+        // GS1 application identifier form: (01)00312345678906... or 0100312345678906...
+        if let range = payload.range(of: #"^\(?01\)?(\d{14})"#, options: .regularExpression) {
+            let gtin = payload[range].filter(\.isNumber).dropFirst(2)
+            return ndc(fromBarcode: String(gtin))
         }
         return nil
     }

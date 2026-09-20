@@ -6,8 +6,10 @@ struct ContentView: View {
     @Query(sort: \Medication.addedAt) private var medications: [Medication]
     @AppStorage("hasSeenNotice") private var hasSeenNotice = false
 
-    @State private var showingAdd = false
-    @State private var addByScanning = false
+    /// How the add sheet was opened. Using the mode as the sheet's item means
+    /// the sheet is always built with the right value.
+    private enum AddMode: String, Identifiable { case typing, scanning; var id: String { rawValue } }
+    @State private var adding: AddMode?
     @State private var store = RecallStore()
 
     var body: some View {
@@ -20,12 +22,16 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("Rx-call")
+            // Every destination is registered here, at the root of the stack.
+            // Declaring them inside pushed screens resolves unreliably.
+            .navigationDestination(for: Medication.self) { med in
+                MedicationDetailView(medication: med) { delete(med) }
+            }
+            .navigationDestination(for: RecallRoute.self) { route in
+                RecallDetailView(match: route.match, medication: route.medication)
+                    .onAppear { store.markSeen(route.match, for: route.medication) }
+            }
             .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button { showingAdd = true } label: {
-                        Label("Add medication", systemImage: "plus")
-                    }
-                }
                 #if DEBUG
                 ToolbarItem(placement: .secondaryAction) {
                     Button("Debug: run background check") {
@@ -44,15 +50,18 @@ struct ContentView: View {
                 #endif
             }
             .safeAreaInset(edge: .bottom) { footer }
-            .sheet(isPresented: $showingAdd, onDismiss: { addByScanning = false }) {
-                AddMedicationView(startScanning: addByScanning)
+            .sheet(item: $adding) { mode in
+                AddMedicationView(startScanning: mode == .scanning)
             }
             .sheet(isPresented: Binding(get: { !hasSeenNotice }, set: { _ in })) {
                 NoticeView { hasSeenNotice = true }
                     .interactiveDismissDisabled()
             }
             #if DEBUG
-            .task { if Demo.isActive { await store.checkAll(medications) } }
+            .task {
+                if Demo.showsTutorial { adding = .scanning }
+                if Demo.isActive { await store.checkAll(medications) }
+            }
             #endif
             .alert("Couldn't check", isPresented: Binding(get: { store.errorMessage != nil },
                                                           set: { if !$0 { store.errorMessage = nil } })) {
@@ -72,14 +81,13 @@ struct ContentView: View {
         } actions: {
             VStack(spacing: 12) {
                 Button {
-                    addByScanning = true
-                    showingAdd = true
+                    adding = .scanning
                 } label: {
                     Label("Scan a bottle", systemImage: "camera.viewfinder")
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                Button("Type a name instead") { showingAdd = true }
+                Button("Type a name instead") { adding = .typing }
             }
         }
     }
@@ -87,9 +95,7 @@ struct ContentView: View {
     private var list: some View {
         List {
             ForEach(medications) { med in
-                NavigationLink {
-                    MedicationDetailView(medication: med) { delete(med) }
-                } label: {
+                NavigationLink(value: med) {
                     MedicationRow(medication: med, matches: store.matches(for: med))
                 }
                 // Swipe from either edge to remove; a full swipe does it in one go.
@@ -113,21 +119,30 @@ struct ContentView: View {
         }
     }
 
-    /// Only the button is pinned. Everything else scrolls with the list so
+    /// Only the buttons are pinned. Everything else scrolls with the list so
     /// that at accessibility text sizes the results aren't pushed off screen.
     private var footer: some View {
-        Button {
-            Task { await store.checkAll(medications) }
-        } label: {
-            if store.isCheckingAny {
-                ProgressView().frame(maxWidth: .infinity)
-            } else {
-                Text("Check for recalls").frame(maxWidth: .infinity)
+        HStack(spacing: 12) {
+            Button {
+                Task { await store.checkAll(medications) }
+            } label: {
+                if store.isCheckingAny {
+                    ProgressView().frame(maxWidth: .infinity)
+                } else {
+                    Text("Check for recalls").frame(maxWidth: .infinity)
+                }
             }
+            .disabled(store.isCheckingAny || medications.isEmpty)
+
+            Button { adding = .typing } label: {
+                Image(systemName: "plus")
+                    .font(.title3.weight(.semibold))
+                    .frame(minWidth: 28)
+            }
+            .accessibilityLabel("Add medication")
         }
         .buttonStyle(.borderedProminent)
         .controlSize(.large)
-        .disabled(store.isCheckingAny || medications.isEmpty)
         .padding()
         .background(.bar)
     }

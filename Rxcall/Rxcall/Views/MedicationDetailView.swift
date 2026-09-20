@@ -38,16 +38,27 @@ struct MedicationDetailView: View {
             }
 
             Section {
-                TextField("Strength", text: optional($medication.strength), prompt: Text("e.g. 500 mg"))
-                TextField("NDC", text: optional($medication.ndc), prompt: Text("Not entered"))
-                    .keyboardType(.numbersAndPunctuation)
-                TextField("Lot number", text: optional($medication.lotNumber), prompt: Text("Not entered"))
-                    .textInputAutocapitalization(.characters)
-                    .autocorrectionDisabled()
+                LabeledContent("Strength") {
+                    TextField("Strength", text: optional($medication.strength), prompt: Text("e.g. 500 mg"))
+                        .multilineTextAlignment(.trailing)
+                }
+                LabeledContent("NDC") {
+                    TextField("NDC", text: optional($medication.ndc), prompt: Text("Not entered"))
+                        .multilineTextAlignment(.trailing)
+                        .keyboardType(.numbersAndPunctuation)
+                        .font(.body.monospaced())
+                }
+                LabeledContent("Lot number") {
+                    TextField("Lot number", text: optional($medication.lotNumber), prompt: Text("Not entered"))
+                        .multilineTextAlignment(.trailing)
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled()
+                        .font(.body.monospaced())
+                }
             } header: {
                 Text("From the bottle")
             } footer: {
-                Text("With the NDC, Rx-call can tell you a recall definitely covers your bottle. The lot number is shown next to each recall's lot list so you can compare.")
+                Text("With the NDC, Rx-call can tell you a recall definitely covers your bottle. The lot number is shown next to each recall's lot list so you can compare. Pharmacy labels often leave both off — look on the box or the manufacturer's bottle (NDC by the barcode, lot next to the expiry date), or ask your pharmacist.")
             }
 
             Section {
@@ -69,7 +80,7 @@ struct MedicationDetailView: View {
                     } else {
                         let shown = visible(matches)
                         ForEach(shown) { match in
-                            NavigationLink(value: match) {
+                            NavigationLink(value: RecallRoute(match: match, medication: medication)) {
                                 RecallRow(match: match, isNew: !medication.hasSeen(match.recall))
                             }
                         }
@@ -115,10 +126,6 @@ struct MedicationDetailView: View {
             guard !aboutLoaded else { return }
             aboutLoaded = true
             about = await MedlinePlusClient.shared.info(for: medication)
-        }
-        .navigationDestination(for: RecallMatch.self) { match in
-            RecallDetailView(match: match, medication: medication)
-                .onAppear { store.markSeen(match, for: medication) }
         }
         .confirmationDialog("Remove \(medication.name)?", isPresented: $confirmingDelete, titleVisibility: .visible) {
             Button("Remove", role: .destructive) {
