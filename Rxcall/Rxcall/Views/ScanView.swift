@@ -71,23 +71,27 @@ struct ScanView: View {
             }
             .padding(.top, 12)
             Spacer()
-            HStack(spacing: 14) {
-                Image(systemName: guidance.symbol)
-                    .font(.title2)
-                    .symbolEffect(.pulse, options: .repeating, isActive: guidance.animate)
-                    .accessibilityHidden(true)
-                Text(guidance.text)
-                    .font(.headline)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 18)
-            .padding(.vertical, 14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 16))
-            .padding(12)
-            .accessibilityAddTraits(.updatesFrequently)
         }
+    }
+
+    /// What to do next. Lives in the panel, not over the camera, so it never
+    /// collides with the chips when the camera area is short.
+    private var guidanceRow: some View {
+        HStack(spacing: 12) {
+            Image(systemName: guidance.symbol)
+                .font(.title3)
+                .foregroundStyle(Color.accentColor)
+                .symbolEffect(.pulse, options: .repeating, isActive: guidance.animate)
+                .frame(width: 28)
+                .accessibilityHidden(true)
+            Text(guidance.text)
+                .font(.subheadline.weight(.medium))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.accentColor.opacity(0.10), in: RoundedRectangle(cornerRadius: 12))
+        .accessibilityAddTraits(.updatesFrequently)
     }
 
     private func chip(_ label: String, done: Bool, partial: Bool) -> some View {
@@ -141,6 +145,7 @@ struct ScanView: View {
 
     private var panel: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if canScan { guidanceRow }
             slot("Medication", value: scan.leader?.displayName, found: scan.isStable)
             slot("Strength", value: scan.strength, found: scan.strength != nil)
             slot("NDC", value: scan.ndc, found: scan.ndc != nil)
