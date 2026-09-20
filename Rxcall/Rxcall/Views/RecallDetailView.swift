@@ -5,6 +5,22 @@ struct RecallDetailView: View {
     var medication: Medication? = nil
     private var recall: Recall { match.recall }
 
+    /// Plain text for handing to a family member or pharmacist.
+    private var shareText: String {
+        var lines = ["FDA drug recall — \(recall.classificationSummary.title) (\(recall.classification))", ""]
+        lines.append("Product: \(recall.productDescription)")
+        if let codes = recall.codeInfo, !codes.isEmpty { lines.append("Lots: \(codes)") }
+        lines.append("Reason: \(recall.reasonForRecall)")
+        lines.append("Firm: \(recall.recallingFirm)")
+        if let d = recall.initiationDate { lines.append("Recall started: \(d.formatted(date: .long, time: .omitted))") }
+        lines.append("Recall number: \(recall.recallNumber)")
+        if let lot = medication?.lotNumber { lines.append("My bottle's lot: \(lot)") }
+        lines.append("")
+        lines.append("FDA record: https://www.accessdata.fda.gov/scripts/ires/index.cfm?Product=\(recall.recallNumber)")
+        lines.append("Shared from Rx-call. Not medical advice — check with a pharmacist.")
+        return lines.joined(separator: "\n")
+    }
+
     var body: some View {
         List {
             Section {
@@ -87,5 +103,10 @@ struct RecallDetailView: View {
         }
         .navigationTitle("Recall")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ShareLink(item: shareText, subject: Text("FDA recall: \(medication?.name ?? "medication")")) {
+                Label("Share", systemImage: "square.and.arrow.up")
+            }
+        }
     }
 }
