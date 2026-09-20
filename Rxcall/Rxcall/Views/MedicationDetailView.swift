@@ -38,12 +38,23 @@ struct MedicationDetailView: View {
             }
 
             Section {
-                TextField("Strength", text: optional($medication.strength), prompt: Text("e.g. 500 mg"))
-                TextField("NDC", text: optional($medication.ndc), prompt: Text("Not entered"))
-                    .keyboardType(.numbersAndPunctuation)
-                TextField("Lot number", text: optional($medication.lotNumber), prompt: Text("Not entered"))
-                    .textInputAutocapitalization(.characters)
-                    .autocorrectionDisabled()
+                LabeledContent("Strength") {
+                    TextField("Strength", text: optional($medication.strength), prompt: Text("e.g. 500 mg"))
+                        .multilineTextAlignment(.trailing)
+                }
+                LabeledContent("NDC") {
+                    TextField("NDC", text: optional($medication.ndc), prompt: Text("Not entered"))
+                        .multilineTextAlignment(.trailing)
+                        .keyboardType(.numbersAndPunctuation)
+                        .font(.body.monospaced())
+                }
+                LabeledContent("Lot number") {
+                    TextField("Lot number", text: optional($medication.lotNumber), prompt: Text("Not entered"))
+                        .multilineTextAlignment(.trailing)
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled()
+                        .font(.body.monospaced())
+                }
             } header: {
                 Text("From the bottle")
             } footer: {
