@@ -15,8 +15,8 @@ struct ScanTutorialView: View {
     private let steps: [(title: String, detail: String)] = [
         ("Hold the bottle up", "Point the camera at the label, about a hand's width away."),
         ("Turn it slowly", "Rx-call reads the label as it comes into view and locks in the name."),
-        ("Keep turning", "The NDC is usually on the other side of the label, near the barcode."),
-        ("Check the box too", "Pharmacy labels often leave out the lot number. It's stamped on the box or the manufacturer's bottle, next to the expiry date."),
+        ("Keep turning", "The NDC, if the label has it, is usually on the other side near the barcode."),
+        ("Check the box too", "Pharmacy labels often leave out the NDC and lot number. Both are on the box or the manufacturer's bottle — the NDC by the barcode, the lot next to the expiry date."),
         ("Tap Use", "That's it. You can fix anything by hand on the next screen."),
     ]
 
@@ -236,13 +236,14 @@ private struct MedicineBox: View {
                 .fill(Color(.systemGray4))
                 .overlay(
                     VStack(alignment: .leading, spacing: 2) {
+                        Text("NDC 68462-521-90")
                         Text("LOT 17232088")
                         Text("EXP 03/2027")
                     }
-                    .font(.system(size: width * 0.085, weight: .medium, design: .monospaced))
+                    .font(.system(size: width * 0.075, weight: .medium, design: .monospaced))
                     .foregroundStyle(.black.opacity(0.75))
                 )
-                .frame(height: width * 0.36)
+                .frame(height: width * 0.44)
                 .clipShape(UnevenRoundedRectangle(bottomLeadingRadius: 6, bottomTrailingRadius: 6))
         }
         .frame(width: width)

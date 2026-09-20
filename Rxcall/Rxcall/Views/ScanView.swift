@@ -111,8 +111,10 @@ struct ScanView: View {
             return ("All set — tap Use.", "checkmark.circle.fill", false)
         }
         if scan.isStalled {
-            if scan.isStable && scan.lotNumber == nil {
-                return ("Pharmacy labels usually don't show the lot number. Check the box or the manufacturer's bottle — it's stamped near the expiry date, often on the bottom.",
+            if scan.isStable && (scan.lotNumber == nil || scan.ndc == nil) {
+                let missing = [scan.ndc == nil ? "NDC" : nil, scan.lotNumber == nil ? "lot number" : nil]
+                    .compactMap { $0 }.joined(separator: " or ")
+                return ("Pharmacy labels often leave out the \(missing). Check the box or the manufacturer's bottle — the NDC is by the barcode, the lot next to the expiry date.",
                         "shippingbox", true)
             }
             if scan.isStable {
