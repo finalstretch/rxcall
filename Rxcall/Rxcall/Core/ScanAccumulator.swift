@@ -15,6 +15,7 @@ final class ScanAccumulator {
     private(set) var candidates: [Candidate] = []
     private(set) var ndc: String?
     private(set) var lotNumber: String?
+    private(set) var strength: String?
     private(set) var framesSeen = 0
     /// When the camera last read a line it hadn't seen before. Goes quiet when
     /// the person has stopped turning the bottle or is showing the same side.
@@ -24,6 +25,7 @@ final class ScanAccumulator {
     private var drugVotes: [String: (entry: DrugEntry, votes: Int)] = [:]
     private var ndcVotes: [String: Int] = [:]
     private var lotVotes: [String: Int] = [:]
+    private var strengthVotes: [String: Int] = [:]
     private var lastProcessed = Date.distantPast
     private let index: DrugIndex
 
@@ -81,12 +83,14 @@ final class ScanAccumulator {
         for code in Self.ndcs(in: text) { ndcVotes[code, default: 0] += 1 }
         for code in barcodes.compactMap(Self.ndc(fromBarcode:)) { ndcVotes[code, default: 0] += 3 }
         for lot in Self.lots(in: text) { lotVotes[lot, default: 0] += 1 }
+        for st in Self.strengths(in: text) { strengthVotes[st, default: 0] += 1 }
 
         candidates = drugVotes.values
             .map { Candidate(entry: $0.entry, votes: $0.votes) }
             .sorted { ($0.votes, -$0.entry.displayName.count) > ($1.votes, -$1.entry.displayName.count) }
         ndc = ndcVotes.max { $0.value < $1.value }?.key
         lotNumber = lotVotes.max { $0.value < $1.value }?.key
+        strength = strengthVotes.max { $0.value < $1.value }?.key
     }
 
     private func vote(_ entry: DrugEntry, weight: Int) {
@@ -98,6 +102,16 @@ final class ScanAccumulator {
     /// NDCs written on a label: 4-4-2, 5-3-2, or 5-4-1 with hyphens.
     static func ndcs(in text: String) -> [String] {
         matches(of: #"\b\d{4,5}-\d{3,4}-\d{1,2}\b"#, in: text)
+    }
+
+    /// "500 MG", "12.5/1000 mg", "0.05%", "100 MCG". Normalised to "500 mg".
+    static func strengths(in text: String) -> [String] {
+        matches(of: #"(?i)\b(\d+(?:\.\d+)?(?:\s?/\s?\d+(?:\.\d+)?)?)\s?(mg|mcg|g|ml|%|meq|units?|iu)(?![a-z])"#, in: text)
+            .map { $0.lowercased().replacingOccurrences(of: #"\s+"#, with: "", options: .regularExpression) }
+            .map { st in
+                // put a single space before the unit: "500mg" -> "500 mg"
+                st.replacingOccurrences(of: #"(\d)([a-z%]+)$"#, with: "$1 $2", options: .regularExpression)
+            }
     }
 
     /// "LOT 17232088", "Lot#: AC-016633", "LOT: J4H077".

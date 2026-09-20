@@ -23,6 +23,7 @@ struct MedicationDetailView: View {
             }
 
             Section {
+                TextField("Strength", text: optional($medication.strength), prompt: Text("e.g. 500 mg"))
                 TextField("NDC", text: optional($medication.ndc), prompt: Text("Not entered"))
                     .keyboardType(.numbersAndPunctuation)
                 TextField("Lot number", text: optional($medication.lotNumber), prompt: Text("Not entered"))
@@ -53,7 +54,7 @@ struct MedicationDetailView: View {
                     } else {
                         ForEach(matches) { match in
                             NavigationLink(value: match) {
-                                RecallRow(match: match)
+                                RecallRow(match: match, isNew: !medication.hasSeen(match.recall))
                             }
                         }
                     }
@@ -77,7 +78,8 @@ struct MedicationDetailView: View {
         .navigationTitle(medication.name)
         .navigationBarTitleDisplayMode(.large)
         .navigationDestination(for: RecallMatch.self) { match in
-            RecallDetailView(match: match)
+            RecallDetailView(match: match, medication: medication)
+                .onAppear { store.markSeen(match, for: medication) }
         }
         .confirmationDialog("Remove \(medication.name)?", isPresented: $confirmingDelete, titleVisibility: .visible) {
             Button("Remove", role: .destructive) {
@@ -101,12 +103,19 @@ struct MedicationDetailView: View {
 /// One recall in a list. Shared by the medication screen.
 struct RecallRow: View {
     let match: RecallMatch
+    var isNew = false
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .firstTextBaseline) {
                 Image(systemName: match.confidence == .ndc ? "exclamationmark.triangle.fill" : "questionmark.circle")
                     .accessibilityHidden(true)
                 Text(match.confidence.label).font(.subheadline.weight(.semibold))
+                if isNew {
+                    Text("New")
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 7).padding(.vertical, 2)
+                        .background(Color.accentColor.opacity(0.15), in: Capsule())
+                }
             }
             Text(match.recall.productDescription)
                 .font(.subheadline)

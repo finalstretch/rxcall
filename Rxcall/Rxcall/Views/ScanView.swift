@@ -6,6 +6,7 @@ struct ScanResult {
     var entry: DrugEntry?
     var ndc: String?
     var lotNumber: String?
+    var strength: String?
 }
 
 /// Live camera scan of a medication label. Everything the camera sees is
@@ -128,6 +129,7 @@ struct ScanView: View {
     private var panel: some View {
         VStack(alignment: .leading, spacing: 12) {
             slot("Medication", value: scan.leader?.displayName, found: scan.isStable)
+            slot("Strength", value: scan.strength, found: scan.strength != nil)
             slot("NDC", value: scan.ndc, found: scan.ndc != nil)
             slot("Lot number", value: scan.lotNumber, found: scan.lotNumber != nil)
 
@@ -137,7 +139,7 @@ struct ScanView: View {
                 Text("Or did you mean").font(.caption).foregroundStyle(.secondary).padding(.top, 4)
                 ForEach(alternatives) { c in
                     Button(c.entry.displayName) {
-                        onFinish(ScanResult(entry: c.entry, ndc: scan.ndc, lotNumber: scan.lotNumber))
+                        onFinish(ScanResult(entry: c.entry, ndc: scan.ndc, lotNumber: scan.lotNumber, strength: scan.strength))
                         dismiss()
                     }
                     .font(.subheadline)
@@ -180,7 +182,7 @@ struct ScanView: View {
     }
 
     private func finish() {
-        onFinish(ScanResult(entry: scan.leader, ndc: scan.ndc, lotNumber: scan.lotNumber))
+        onFinish(ScanResult(entry: scan.leader, ndc: scan.ndc, lotNumber: scan.lotNumber, strength: scan.strength))
         dismiss()
     }
 }

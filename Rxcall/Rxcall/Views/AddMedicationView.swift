@@ -9,6 +9,7 @@ struct AddMedicationView: View {
     @State private var picked: DrugEntry?
     @State private var ndc = ""
     @State private var lot = ""
+    @State private var strength = ""
     @State private var scanning = false
 
     private var suggestions: [DrugEntry] {
@@ -54,6 +55,7 @@ struct AddMedicationView: View {
                     Text("Generic or brand name, as it's written on the label — for example “metformin” or “Synjardy”. Pick a suggestion if one matches; you can also just type a name.")
                 }
                 Section {
+                    TextField("Strength (optional)", text: $strength, prompt: Text("Strength, e.g. 500 mg"))
                     TextField("NDC (optional)", text: $ndc)
                         .keyboardType(.numbersAndPunctuation)
                     TextField("Lot number (optional)", text: $lot)
@@ -75,6 +77,7 @@ struct AddMedicationView: View {
                     }
                     if let code = result.ndc, ndc.isEmpty { ndc = code }
                     if let code = result.lotNumber, lot.isEmpty { lot = code }
+                    if let s = result.strength, strength.isEmpty { strength = s }
                 }
             }
             .toolbar {
@@ -98,7 +101,8 @@ struct AddMedicationView: View {
         // typed something we don't know, search exactly what they typed.
         let generic = picked?.searchTerms.last
         context.insert(Medication(name: name.trimmingCharacters(in: .whitespacesAndNewlines),
-                                  genericName: generic, ndc: clean(ndc), lotNumber: clean(lot)))
+                                  genericName: generic, ndc: clean(ndc), lotNumber: clean(lot),
+                                  strength: clean(strength)))
         dismiss()
     }
 }
