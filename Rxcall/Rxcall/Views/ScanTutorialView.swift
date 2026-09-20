@@ -29,18 +29,19 @@ struct ScanTutorialView: View {
                             .dynamicTypeSize(.large)
                             .accessibilityHidden(true)
 
-                        VStack(spacing: 8) {
-                            Text(steps[step].title)
-                                .font(.title2.bold())
-                            Text(steps[step].detail)
-                                .font(.body)
-                                .foregroundStyle(.secondary)
+                        // Every caption is laid out (invisibly) so the block is
+                        // always as tall as the longest one; otherwise the
+                        // picture jumps up and down as the text changes length.
+                        ZStack {
+                            ForEach(steps.indices, id: \.self) { i in
+                                caption(i)
+                                    .opacity(i == step ? 1 : 0)
+                                    .accessibilityHidden(i != step)
+                            }
                         }
-                        .multilineTextAlignment(.center)
-                        .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, 24)
-                        .animation(.default, value: step)
-                        .accessibilityElement(children: .combine)
+                        .animation(.easeInOut(duration: 0.4), value: step)
+                        .accessibilityElement(children: .contain)
                         .accessibilityAddTraits(.updatesFrequently)
 
                         HStack(spacing: 8) {
@@ -77,6 +78,19 @@ struct ScanTutorialView: View {
             }
             .task { await loop() }
         }
+    }
+
+    private func caption(_ i: Int) -> some View {
+        VStack(spacing: 8) {
+            Text(steps[i].title)
+                .font(.title2.bold())
+            Text(steps[i].detail)
+                .font(.body)
+                .foregroundStyle(.secondary)
+        }
+        .multilineTextAlignment(.center)
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .top)
     }
 
     private func loop() async {
