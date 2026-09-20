@@ -160,6 +160,12 @@ enum MatchConfidence: Comparable {
     }
 }
 
+/// Navigation value for a recall opened from a medication's screen.
+struct RecallRoute: Hashable {
+    let match: RecallMatch
+    let medication: Medication
+}
+
 struct RecallMatch: Identifiable, Hashable {
     let recall: Recall
     let confidence: MatchConfidence

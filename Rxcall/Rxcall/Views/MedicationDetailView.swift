@@ -69,7 +69,7 @@ struct MedicationDetailView: View {
                     } else {
                         let shown = visible(matches)
                         ForEach(shown) { match in
-                            NavigationLink(value: match) {
+                            NavigationLink(value: RecallRoute(match: match, medication: medication)) {
                                 RecallRow(match: match, isNew: !medication.hasSeen(match.recall))
                             }
                         }
@@ -115,10 +115,6 @@ struct MedicationDetailView: View {
             guard !aboutLoaded else { return }
             aboutLoaded = true
             about = await MedlinePlusClient.shared.info(for: medication)
-        }
-        .navigationDestination(for: RecallMatch.self) { match in
-            RecallDetailView(match: match, medication: medication)
-                .onAppear { store.markSeen(match, for: medication) }
         }
         .confirmationDialog("Remove \(medication.name)?", isPresented: $confirmingDelete, titleVisibility: .visible) {
             Button("Remove", role: .destructive) {

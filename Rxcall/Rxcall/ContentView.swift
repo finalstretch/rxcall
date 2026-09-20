@@ -22,6 +22,15 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("Rx-call")
+            // Every destination is registered here, at the root of the stack.
+            // Declaring them inside pushed screens resolves unreliably.
+            .navigationDestination(for: Medication.self) { med in
+                MedicationDetailView(medication: med) { delete(med) }
+            }
+            .navigationDestination(for: RecallRoute.self) { route in
+                RecallDetailView(match: route.match, medication: route.medication)
+                    .onAppear { store.markSeen(route.match, for: route.medication) }
+            }
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
                     Button { adding = .typing } label: {
@@ -91,9 +100,7 @@ struct ContentView: View {
     private var list: some View {
         List {
             ForEach(medications) { med in
-                NavigationLink {
-                    MedicationDetailView(medication: med) { delete(med) }
-                } label: {
+                NavigationLink(value: med) {
                     MedicationRow(medication: med, matches: store.matches(for: med))
                 }
                 // Swipe from either edge to remove; a full swipe does it in one go.
