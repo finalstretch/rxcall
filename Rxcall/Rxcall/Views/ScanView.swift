@@ -137,7 +137,7 @@ struct ScanView: View {
         }
         let missing = [scan.ndc == nil ? "NDC" : nil, scan.lotNumber == nil ? "lot number" : nil]
             .compactMap { $0 }.joined(separator: " and ")
-        return ("Got the name. Now turn to the other side for the \(missing) — usually near the barcode.",
+        return ("Got the name — you can tap Use now. Or keep turning for the \(missing), usually near the barcode.",
                 "arrow.trianglehead.2.clockwise.rotate.90", true)
     }
 
@@ -154,6 +154,10 @@ struct ScanView: View {
             slot("Strength", value: scan.strength, found: scan.strength != nil)
             slot("NDC", value: scan.ndc, found: scan.ndc != nil)
             slot("Lot number", value: scan.lotNumber, found: scan.lotNumber != nil)
+            Text("The name is all that's needed. Strength, NDC, and lot number are optional — they make recall matches more certain, and you can add them later.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
 
             // Runners-up with real support, so a wrong guess is one tap from fixed.
             // Most are the same drug under another brand, or a combination that
