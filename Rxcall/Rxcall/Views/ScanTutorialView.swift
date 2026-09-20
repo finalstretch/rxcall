@@ -8,6 +8,9 @@ struct ScanTutorialView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var step = 0
+    /// Set when the person swipes or taps a dot; auto-advance waits a while
+    /// afterwards so it doesn't fight them.
+    @State private var lastManualChange: Date?
 
     private let steps: [(title: String, detail: String)] = [
         ("Hold the bottle up", "Point the camera at the label, about a hand's width away."),
@@ -49,13 +52,31 @@ struct ScanTutorialView: View {
                                 Capsule()
                                     .fill(i == step ? Color.accentColor : Color.secondary.opacity(0.3))
                                     .frame(width: i == step ? 22 : 8, height: 8)
+                                    .contentShape(Rectangle().inset(by: -10))
+                                    .onTapGesture { go(to: i) }
                             }
                         }
                         .animation(.default, value: step)
                         .accessibilityHidden(true)
+
+                        Text("Swipe to move between steps")
+                            .font(.caption)
+                            .foregroundStyle(.tertiary)
                     }
                     .padding(.top, 8)
                     .padding(.bottom, 16)
+                    .contentShape(Rectangle())
+                    .gesture(
+                        DragGesture(minimumDistance: 24)
+                            .onEnded { g in
+                                guard abs(g.translation.width) > abs(g.translation.height) else { return }
+                                go(to: step + (g.translation.width < 0 ? 1 : -1))
+                            }
+                    )
+                    .accessibilityAction(.default) { go(to: step + 1) }
+                    .accessibilityAdjustableAction { direction in
+                        go(to: step + (direction == .increment ? 1 : -1))
+                    }
                 }
 
                 Button {
@@ -96,8 +117,16 @@ struct ScanTutorialView: View {
     private func loop() async {
         while !Task.isCancelled {
             try? await Task.sleep(for: .seconds(step == 0 ? 2.2 : 3.2))
+            // Hands off for a while after a swipe or tap.
+            if let t = lastManualChange, Date().timeIntervalSince(t) < 7 { continue }
             withAnimation(.easeInOut(duration: 0.8)) { step = (step + 1) % steps.count }
         }
+    }
+
+    private func go(to i: Int) {
+        guard steps.indices.contains(i) else { return }
+        lastManualChange = .now
+        withAnimation(.easeInOut(duration: 0.5)) { step = i }
     }
 
     private func finish() {
