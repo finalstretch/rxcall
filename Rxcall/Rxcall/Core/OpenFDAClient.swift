@@ -37,6 +37,18 @@ struct OpenFDAClient {
         return try decoder.decode(Envelope.self, from: data).results
     }
 
+    /// Ongoing recalls mentioning any of the medication's names, de-duplicated.
+    func ongoingRecalls(for medication: Medication) async throws -> [Recall] {
+        var seen = Set<String>()
+        var all: [Recall] = []
+        for term in medication.searchTerms {
+            for recall in try await ongoingRecalls(mentioning: term) where seen.insert(recall.id).inserted {
+                all.append(recall)
+            }
+        }
+        return all
+    }
+
     private struct Envelope: Decodable {
         let results: [Recall]
     }

@@ -41,7 +41,10 @@ enum Demo {
         let context = container.mainContext
         let existing = (try? context.fetch(FetchDescriptor<Medication>())) ?? []
         for name in names where !existing.contains(where: { $0.name == name }) {
-            context.insert(Medication(name: name))
+            // Resolve through the index the way picking a suggestion would.
+            let entry = DrugIndex.shared.suggestions(for: name, limit: 1).first
+            context.insert(Medication(name: entry?.displayName ?? name,
+                                      genericName: entry?.searchTerms.last))
         }
     }
 }
