@@ -80,7 +80,6 @@ struct SettingsView: View {
                     } label: {
                         Label("Where the information comes from", systemImage: "building.columns")
                     }
-                    LabeledContent("Your medication list", value: "Stays on this phone")
                 } header: {
                     Text("Data and privacy")
                 } footer: {
