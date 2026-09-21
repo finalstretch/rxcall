@@ -52,7 +52,7 @@ struct ScanView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingHelp) { ScanTutorialView {} }
+            .sheet(isPresented: $showingHelp) { ScanTutorialView {}.textSized() }
             // Turning a bottle in front of the camera can take a while; don't
             // let the screen dim and lock mid-scan. Restored on the way out.
             .onAppear { UIApplication.shared.isIdleTimerDisabled = true }

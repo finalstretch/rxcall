@@ -11,10 +11,11 @@ struct ContentView: View {
     /// Hand-offs go through onDismiss, since a sheet can't be presented while
     /// another is dismissing.
     private enum Sheet: Identifiable {
-        case typing, tutorial, scanner, form(ScanResult)
+        case typing, tutorial, scanner, form(ScanResult), settings
         var id: String {
             switch self {
-            case .typing: "typing"; case .tutorial: "tutorial"; case .scanner: "scanner"; case .form: "form"
+            case .typing: "typing"; case .tutorial: "tutorial"; case .scanner: "scanner"
+            case .form: "form"; case .settings: "settings"
             }
         }
     }
@@ -44,15 +45,19 @@ struct ContentView: View {
                     .onAppear { store.markSeen(route.match, for: route.medication) }
             }
             .toolbar {
-                if !medications.isEmpty {
-                    ToolbarItem(placement: .primaryAction) {
-                        Menu {
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Button { sheet = .settings } label: {
+                            Label("Settings", systemImage: "gear")
+                        }
+                        if !medications.isEmpty {
+                            Divider()
                             Button(role: .destructive) { confirmingRemoveAll = true } label: {
                                 Label("Remove all medications", systemImage: "trash")
                             }
-                        } label: {
-                            Label("More", systemImage: "ellipsis.circle")
                         }
+                    } label: {
+                        Label("More", systemImage: "ellipsis.circle")
                     }
                 }
                 #if DEBUG
@@ -76,23 +81,29 @@ struct ContentView: View {
             .sheet(item: $sheet, onDismiss: {
                 if let n = nextSheet { nextSheet = nil; sheet = n }
             }) { which in
-                switch which {
-                case .typing:
-                    AddMedicationView()
-                case .tutorial:
-                    ScanTutorialView {
-                        hasSeenScanTutorial = true
-                        nextSheet = .scanner
+                Group {
+                    switch which {
+                    case .typing:
+                        AddMedicationView()
+                    case .tutorial:
+                        ScanTutorialView {
+                            hasSeenScanTutorial = true
+                            nextSheet = .scanner
+                        }
+                    case .scanner:
+                        ScanView { result in nextSheet = .form(result) }
+                    case .form(let result):
+                        AddMedicationView(prefill: result)
+                    case .settings:
+                        SettingsView()
                     }
-                case .scanner:
-                    ScanView { result in nextSheet = .form(result) }
-                case .form(let result):
-                    AddMedicationView(prefill: result)
                 }
+                .textSized()
             }
             .sheet(isPresented: Binding(get: { !hasSeenNotice }, set: { _ in })) {
                 NoticeView { hasSeenNotice = true }
                     .interactiveDismissDisabled()
+                    .textSized()
             }
             #if DEBUG
             .task {

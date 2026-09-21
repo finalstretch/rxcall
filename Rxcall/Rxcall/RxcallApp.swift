@@ -22,6 +22,7 @@ struct RxcallApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .textSized()
         }
         .modelContainer(container)
         .onChange(of: scenePhase) { _, phase in

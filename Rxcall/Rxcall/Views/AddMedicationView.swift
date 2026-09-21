@@ -133,15 +133,18 @@ struct AddMedicationView: View {
             .sheet(item: $sheet, onDismiss: {
                 if scanAfterTutorial { scanAfterTutorial = false; sheet = .scanner }
             }) { which in
-                switch which {
-                case .tutorial:
-                    ScanTutorialView {
-                        hasSeenScanTutorial = true
-                        scanAfterTutorial = true
+                Group {
+                    switch which {
+                    case .tutorial:
+                        ScanTutorialView {
+                            hasSeenScanTutorial = true
+                            scanAfterTutorial = true
+                        }
+                    case .scanner:
+                        scanner
                     }
-                case .scanner:
-                    scanner
                 }
+                .textSized()
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
