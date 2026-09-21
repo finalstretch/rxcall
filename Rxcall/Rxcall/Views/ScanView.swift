@@ -26,19 +26,25 @@ struct ScanView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                if canScan {
-                    ZStack {
-                        LabelScanner(scan: scan)
-                        overlay
+            GeometryReader { geo in
+                VStack(spacing: 0) {
+                    if canScan {
+                        ZStack {
+                            LabelScanner(scan: scan)
+                            overlay
+                        }
+                        .ignoresSafeArea(edges: .horizontal)
+                        // The camera keeps at least this much of the screen
+                        // whatever the text size; the panel scrolls in the rest.
+                        .frame(minHeight: geo.size.height * 0.45)
+                    } else {
+                        ContentUnavailableView("Scanning needs a camera",
+                                               systemImage: "camera",
+                                               description: Text("This device can't scan labels. You can still type the name."))
                     }
-                    .ignoresSafeArea(edges: .horizontal)
-                } else {
-                    ContentUnavailableView("Scanning needs a camera",
-                                           systemImage: "camera",
-                                           description: Text("This device can't scan labels. You can still type the name."))
+                    ScrollView { panel }
+                    useButton
                 }
-                panel
             }
             .navigationTitle("Scan the label")
             .navigationBarTitleDisplayMode(.inline)
@@ -185,18 +191,22 @@ struct ScanView: View {
                 .padding(.top, 4)
             }
 
-            Button {
-                finish()
-            } label: {
-                Text(useLabel).frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .disabled(scan.leader == nil && scan.ndc == nil)
-            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
+    }
+
+    private var useButton: some View {
+        Button {
+            finish()
+        } label: {
+            Text(useLabel).frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+        .disabled(scan.leader == nil && scan.ndc == nil)
+        .padding(.horizontal)
+        .padding(.vertical, 10)
         .background(.bar)
     }
 
