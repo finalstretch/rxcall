@@ -177,12 +177,11 @@ extension View {
 /// Applies the chosen text size to everything beneath it.
 struct TextSizeModifier: ViewModifier {
     @AppStorage("textSize") private var textSize = TextSizeChoice.system.rawValue
+    @Environment(\.dynamicTypeSize) private var systemSize
 
     func body(content: Content) -> some View {
-        if let size = (TextSizeChoice(rawValue: textSize) ?? .system).dynamicTypeSize {
-            content.dynamicTypeSize(size)
-        } else {
-            content
-        }
+        // Always the same modifier, so changing the setting doesn't swap the
+        // view tree (which would tear down whatever sheet is open).
+        content.dynamicTypeSize((TextSizeChoice(rawValue: textSize) ?? .system).dynamicTypeSize ?? systemSize)
     }
 }
