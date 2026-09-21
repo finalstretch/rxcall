@@ -85,8 +85,8 @@ enum Notifications {
         if let first = new.first {
             let product = first.recall.productDescription.prefix(90)
             content.body = n == 1
-                ? "\(product)… Open Rx-call to check the lot number."
-                : "\(n) new recalls. Open Rx-call to check the lot numbers."
+                ? "\(product)… Open Rxcall to check the lot number."
+                : "\(n) new recalls. Open Rxcall to check the lot numbers."
         }
         content.sound = .default
         content.userInfo = ["medication": medication.name]

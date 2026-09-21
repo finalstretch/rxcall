@@ -33,7 +33,7 @@ struct ContentView: View {
                     list
                 }
             }
-            .navigationTitle("Rx-call")
+            .navigationTitle("Rxcall")
             // Every destination is registered here, at the root of the stack.
             // Declaring them inside pushed screens resolves unreliably.
             .navigationDestination(for: Medication.self) { med in
@@ -108,7 +108,7 @@ struct ContentView: View {
                     for med in medications { context.delete(med) }
                 }
             } message: {
-                Text("Rx-call will stop checking recalls for them. This can't be undone, but you can add them again any time.")
+                Text("Rxcall will stop checking recalls for them. This can't be undone, but you can add them again any time.")
             }
             .alert("Couldn't check", isPresented: Binding(get: { store.errorMessage != nil },
                                                           set: { if !$0 { store.errorMessage = nil } })) {
@@ -124,7 +124,7 @@ struct ContentView: View {
         ContentUnavailableView {
             Label("No medications yet", systemImage: "pills")
         } description: {
-            Text("Add what you take and Rx-call will check the FDA's recall list for it. Your list stays on this phone.")
+            Text("Add what you take and Rxcall will check the FDA's recall list for it. Your list stays on this phone.")
         } actions: {
             VStack(spacing: 12) {
                 Button {
