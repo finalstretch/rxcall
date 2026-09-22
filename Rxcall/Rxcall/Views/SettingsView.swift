@@ -69,6 +69,11 @@ struct SettingsView: View {
                     } label: {
                         Label("How to scan a bottle", systemImage: "camera.viewfinder")
                     }
+                    NavigationLink {
+                        FeedbackView()
+                    } label: {
+                        Label("Send feedback", systemImage: "envelope")
+                    }
                     Link(destination: URL(string: UIApplication.openSettingsURLString)!) {
                         Label("Camera and notification permissions", systemImage: "gear")
                     }
