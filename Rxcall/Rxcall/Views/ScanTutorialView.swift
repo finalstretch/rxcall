@@ -14,7 +14,7 @@ struct ScanTutorialView: View {
 
     private let steps: [(title: String, detail: String)] = [
         ("Hold the bottle up", "Point the camera at the label, about a hand's width away."),
-        ("Turn it slowly", "Rx-call reads the label as it comes into view and locks in the name."),
+        ("Turn it slowly", "Rxcall reads the label as it comes into view and locks in the name."),
         ("Keep turning", "The NDC, if the label has it, is usually on the other side near the barcode."),
         ("Check the box too", "Pharmacy labels often leave out the NDC and lot number. Both are on the box or the manufacturer's bottle — the NDC by the barcode, the lot next to the expiry date."),
         ("Tap Use", "That's it. You can fix anything by hand on the next screen."),

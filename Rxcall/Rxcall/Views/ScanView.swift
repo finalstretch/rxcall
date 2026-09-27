@@ -26,19 +26,25 @@ struct ScanView: View {
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                if canScan {
-                    ZStack {
-                        LabelScanner(scan: scan)
-                        overlay
+            GeometryReader { geo in
+                VStack(spacing: 0) {
+                    if canScan {
+                        ZStack {
+                            LabelScanner(scan: scan)
+                            overlay
+                        }
+                        .ignoresSafeArea(edges: .horizontal)
+                        // The camera keeps at least this much of the screen
+                        // whatever the text size; the panel scrolls in the rest.
+                        .frame(minHeight: geo.size.height * 0.45)
+                    } else {
+                        ContentUnavailableView("Scanning needs a camera",
+                                               systemImage: "camera",
+                                               description: Text("This device can't scan labels. You can still type the name."))
                     }
-                    .ignoresSafeArea(edges: .horizontal)
-                } else {
-                    ContentUnavailableView("Scanning needs a camera",
-                                           systemImage: "camera",
-                                           description: Text("This device can't scan labels. You can still type the name."))
+                    ScrollView { panel }
+                    useButton
                 }
-                panel
             }
             .navigationTitle("Scan the label")
             .navigationBarTitleDisplayMode(.inline)
@@ -52,7 +58,11 @@ struct ScanView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingHelp) { ScanTutorialView {} }
+            .sheet(isPresented: $showingHelp) { ScanTutorialView {}.textSized() }
+            // Turning a bottle in front of the camera can take a while; don't
+            // let the screen dim and lock mid-scan. Restored on the way out.
+            .onAppear { UIApplication.shared.isIdleTimerDisabled = true }
+            .onDisappear { UIApplication.shared.isIdleTimerDisabled = false }
             .onReceive(clock) { tick = $0 }
             .onChange(of: scan.isStable) { _, found in if found { haptic(.success) } }
             .onChange(of: scan.ndc) { _, v in if v != nil { haptic(.success) } }
@@ -71,23 +81,27 @@ struct ScanView: View {
             }
             .padding(.top, 12)
             Spacer()
-            HStack(spacing: 14) {
-                Image(systemName: guidance.symbol)
-                    .font(.title2)
-                    .symbolEffect(.pulse, options: .repeating, isActive: guidance.animate)
-                    .accessibilityHidden(true)
-                Text(guidance.text)
-                    .font(.headline)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            .foregroundStyle(.white)
-            .padding(.horizontal, 18)
-            .padding(.vertical, 14)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.black.opacity(0.55), in: RoundedRectangle(cornerRadius: 16))
-            .padding(12)
-            .accessibilityAddTraits(.updatesFrequently)
         }
+    }
+
+    /// What to do next. Lives in the panel, not over the camera, so it never
+    /// collides with the chips when the camera area is short.
+    private var guidanceRow: some View {
+        HStack(spacing: 12) {
+            Image(systemName: guidance.symbol)
+                .font(.title3)
+                .foregroundStyle(Color.accentColor)
+                .symbolEffect(.pulse, options: .repeating, isActive: guidance.animate)
+                .frame(width: 28)
+                .accessibilityHidden(true)
+            Text(guidance.text)
+                .font(.subheadline.weight(.medium))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(12)
+        .background(Color.accentColor.opacity(0.10), in: RoundedRectangle(cornerRadius: 12))
+        .accessibilityAddTraits(.updatesFrequently)
     }
 
     private func chip(_ label: String, done: Bool, partial: Bool) -> some View {
@@ -129,7 +143,7 @@ struct ScanView: View {
         }
         let missing = [scan.ndc == nil ? "NDC" : nil, scan.lotNumber == nil ? "lot number" : nil]
             .compactMap { $0 }.joined(separator: " and ")
-        return ("Got the name. Now turn to the other side for the \(missing) — usually near the barcode.",
+        return ("Got the name — you can tap Use now. Or keep turning for the \(missing), usually near the barcode.",
                 "arrow.trianglehead.2.clockwise.rotate.90", true)
     }
 
@@ -141,37 +155,75 @@ struct ScanView: View {
 
     private var panel: some View {
         VStack(alignment: .leading, spacing: 12) {
+            if canScan { guidanceRow }
             slot("Medication", value: scan.leader?.displayName, found: scan.isStable)
             slot("Strength", value: scan.strength, found: scan.strength != nil)
             slot("NDC", value: scan.ndc, found: scan.ndc != nil)
             slot("Lot number", value: scan.lotNumber, found: scan.lotNumber != nil)
+            Text("The name is all that's needed. Strength, NDC, and lot number are optional — they make recall matches more certain, and you can add them later.")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
 
             // Runners-up with real support, so a wrong guess is one tap from fixed.
+            // Most are the same drug under another brand, or a combination that
+            // contains it — say which, so the list doesn't look like duplicates.
             let alternatives = scan.candidates.dropFirst().filter { $0.votes >= 2 }.prefix(3)
-            if !alternatives.isEmpty {
-                Text("Or did you mean").font(.caption).foregroundStyle(.secondary).padding(.top, 4)
-                ForEach(alternatives) { c in
-                    Button(c.entry.displayName) {
-                        onFinish(ScanResult(entry: c.entry, ndc: scan.ndc, lotNumber: scan.lotNumber, strength: scan.strength))
-                        dismiss()
+            if !alternatives.isEmpty, let leader = scan.leader {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Not \(leader.displayName)? It could also be:")
+                        .font(.caption).foregroundStyle(.secondary)
+                    ForEach(alternatives) { c in
+                        Button {
+                            onFinish(ScanResult(entry: c.entry, ndc: scan.ndc, lotNumber: scan.lotNumber, strength: scan.strength))
+                            dismiss()
+                        } label: {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(c.entry.displayName).font(.subheadline)
+                                Text(relationship(of: c.entry, to: leader))
+                                    .font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
                     }
-                    .font(.subheadline)
+                    Text("Pick whichever name is printed on your label.")
+                        .font(.caption2).foregroundStyle(.tertiary)
                 }
+                .padding(.top, 4)
             }
 
-            Button {
-                finish()
-            } label: {
-                Text(useLabel).frame(maxWidth: .infinity)
-            }
-            .buttonStyle(.borderedProminent)
-            .controlSize(.large)
-            .disabled(scan.leader == nil && scan.ndc == nil)
-            .padding(.top, 4)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding()
+    }
+
+    private var useButton: some View {
+        Button {
+            finish()
+        } label: {
+            Text(useLabel).frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.borderedProminent)
+        .controlSize(.large)
+        .disabled(scan.leader == nil && scan.ndc == nil)
+        .padding(.horizontal)
+        .padding(.vertical, 10)
         .background(.bar)
+    }
+
+    /// "Same drug, sold as Riomet" / "Contains metformin plus sitagliptin" / the generic.
+    private func relationship(of entry: DrugEntry, to leader: DrugEntry) -> String {
+        let a = entry.generic.lowercased(), b = leader.generic.lowercased()
+        if a == b {
+            return entry.brand == nil ? "Same drug — the generic name"
+                                      : "Same drug, sold under this brand"
+        }
+        let leaderIngredient = leader.searchTerms.last?.lowercased() ?? b
+        if a.contains(leaderIngredient) {
+            let others = a.components(separatedBy: " and ").filter { $0 != leaderIngredient }
+            return others.isEmpty ? "Contains \(leaderIngredient)"
+                                  : "Contains \(leaderIngredient) plus \(others.joined(separator: ", "))"
+        }
+        return entry.subtitle ?? "A different drug"
     }
 
     private var useLabel: String {
@@ -214,6 +266,7 @@ private struct LabelScanner: UIViewControllerRepresentable {
             qualityLevel: .accurate,
             recognizesMultipleItems: true,
             isHighFrameRateTrackingEnabled: false,
+            isGuidanceEnabled: false,   // VisionKit's own "Slow down" / "Find text" hints; we show our own
             isHighlightingEnabled: true
         )
         context.coordinator.start(scanner)

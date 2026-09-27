@@ -6,14 +6,27 @@ struct ContentView: View {
     @Query(sort: \Medication.addedAt) private var medications: [Medication]
     @AppStorage("hasSeenNotice") private var hasSeenNotice = false
 
-    /// How the add sheet was opened. Using the mode as the sheet's item means
-    /// the sheet is always built with the right value.
-    private enum AddMode: String, Identifiable { case typing, scanning; var id: String { rawValue } }
-    @State private var adding: AddMode?
+    /// One sheet slot. "Scan a bottle" goes straight to the camera (after the
+    /// one-time tutorial); the add form only appears afterwards, pre-filled.
+    /// Hand-offs go through onDismiss, since a sheet can't be presented while
+    /// another is dismissing.
+    private enum Sheet: Identifiable {
+        case typing, tutorial, scanner, form(ScanResult), settings
+        var id: String {
+            switch self {
+            case .typing: "typing"; case .tutorial: "tutorial"; case .scanner: "scanner"
+            case .form: "form"; case .settings: "settings"
+            }
+        }
+    }
+    @State private var path = NavigationPath()
+    @State private var sheet: Sheet?
+    @State private var nextSheet: Sheet?
+    @AppStorage("hasSeenScanTutorial") private var hasSeenScanTutorial = false
     @State private var store = RecallStore()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             Group {
                 if medications.isEmpty {
                     emptyState
@@ -21,7 +34,7 @@ struct ContentView: View {
                     list
                 }
             }
-            .navigationTitle("Rx-call")
+            .navigationTitle("Rxcall")
             // Every destination is registered here, at the root of the stack.
             // Declaring them inside pushed screens resolves unreliably.
             .navigationDestination(for: Medication.self) { med in
@@ -32,6 +45,11 @@ struct ContentView: View {
                     .onAppear { store.markSeen(route.match, for: route.medication) }
             }
             .toolbar {
+                ToolbarItem(placement: .primaryAction) {
+                    Button { sheet = .settings } label: {
+                        Label("Settings", systemImage: "gear")
+                    }
+                }
                 #if DEBUG
                 ToolbarItem(placement: .secondaryAction) {
                     Button("Debug: run background check") {
@@ -50,17 +68,44 @@ struct ContentView: View {
                 #endif
             }
             .safeAreaInset(edge: .bottom) { footer }
-            .sheet(item: $adding) { mode in
-                AddMedicationView(startScanning: mode == .scanning)
+            .sheet(item: $sheet, onDismiss: {
+                if let n = nextSheet { nextSheet = nil; sheet = n }
+            }) { which in
+                Group {
+                    switch which {
+                    case .typing:
+                        AddMedicationView()
+                    case .tutorial:
+                        ScanTutorialView {
+                            hasSeenScanTutorial = true
+                            nextSheet = .scanner
+                        }
+                    case .scanner:
+                        ScanView { result in nextSheet = .form(result) }
+                    case .form(let result):
+                        AddMedicationView(prefill: result)
+                    case .settings:
+                        SettingsView()
+                    }
+                }
+                .textSized()
             }
             .sheet(isPresented: Binding(get: { !hasSeenNotice }, set: { _ in })) {
                 NoticeView { hasSeenNotice = true }
                     .interactiveDismissDisabled()
+                    .textSized()
             }
             #if DEBUG
             .task {
-                if Demo.showsTutorial { adding = .scanning }
+                if Demo.showsTutorial { sheet = .tutorial }
+                if Demo.showsSettings { sheet = .settings }
                 if Demo.isActive { await store.checkAll(medications) }
+                if let screen = Demo.screen, let med = medications.first {
+                    path.append(med)
+                    if screen == "recall", let match = store.matches(for: med)?.first {
+                        path.append(RecallRoute(match: match, medication: med))
+                    }
+                }
             }
             #endif
             .alert("Couldn't check", isPresented: Binding(get: { store.errorMessage != nil },
@@ -77,17 +122,17 @@ struct ContentView: View {
         ContentUnavailableView {
             Label("No medications yet", systemImage: "pills")
         } description: {
-            Text("Add what you take and Rx-call will check the FDA's recall list for it. Your list stays on this phone.")
+            Text("Add what you take and Rxcall will check the FDA's recall list for it. Your list stays on this phone.")
         } actions: {
             VStack(spacing: 12) {
                 Button {
-                    adding = .scanning
+                    sheet = hasSeenScanTutorial ? .scanner : .tutorial
                 } label: {
                     Label("Scan a bottle", systemImage: "camera.viewfinder")
                 }
                 .buttonStyle(.borderedProminent)
                 .controlSize(.large)
-                Button("Type a name instead") { adding = .typing }
+                Button("Type a name instead") { sheet = .typing }
             }
         }
     }
@@ -134,7 +179,7 @@ struct ContentView: View {
             }
             .disabled(store.isCheckingAny || medications.isEmpty)
 
-            Button { adding = .typing } label: {
+            Button { sheet = .typing } label: {
                 Image(systemName: "plus")
                     .font(.title3.weight(.semibold))
                     .frame(minWidth: 28)

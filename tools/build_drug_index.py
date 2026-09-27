@@ -21,6 +21,25 @@ OTC_ROUTES = {"ORAL", "OPHTHALMIC", "NASAL", "RECTAL", "VAGINAL", "SUBLINGUAL", 
               "TRANSDERMAL", "RESPIRATORY (INHALATION)", "AURICULAR (OTIC)", "OTIC"}
 DROP_CATEGORIES = {"UNAPPROVED HOMEOPATHIC", "BULK INGREDIENT", "DRUG FOR FURTHER PROCESSING"}
 
+# Topical OTC products are mostly soaps, sanitizers and sunscreens, which
+# would drown the list. A topical is kept only if it contains a real
+# medicinal ingredient someone would call "my cream / ointment / drops".
+TOPICAL_DRUGS = {"hydrocortisone", "bacitracin", "neomycin", "polymyxin", "clotrimazole", "miconazole",
+                 "terbinafine", "tolnaftate", "butenafine", "ketoconazole", "benzoyl peroxide",
+                 "salicylic acid", "lidocaine", "benzocaine", "pramoxine", "diphenhydramine",
+                 "calamine", "permethrin", "selenium sulfide", "coal tar", "pyrithione", "minoxidil",
+                 "capsaicin", "methyl salicylate", "trolamine", "diclofenac", "adapalene", "tretinoin",
+                 "urea", "ammonium lactate", "povidone", "mupirocin", "nystatin", "clindamycin",
+                 "erythromycin", "metronidazole", "tacrolimus", "triamcinolone", "betamethasone",
+                 "clobetasol", "fluocinonide", "mometasone", "desonide", "imiquimod", "ivermectin",
+                 "silver sulfadiazine", "acyclovir", "docosanol", "phenol", "zinc oxide", "menthol",
+                 "camphor", "dibucaine", "witch hazel", "hydroquinone", "azelaic", "dapsone",
+                 "lindane", "spinosad", "malathion", "crotamiton", "sulfur", "resorcinol"}
+
+def is_medicinal_topical(generic):
+    g = generic.lower()
+    return any(d in g for d in TOPICAL_DRUGS)
+
 def keep(r):
     if not r.get("finished") or r.get("marketing_category") in DROP_CATEGORIES:
         return False
@@ -28,7 +47,9 @@ def keep(r):
     if t == "HUMAN PRESCRIPTION DRUG":
         return True
     if t == "HUMAN OTC DRUG":
-        return bool(set(r.get("route", [])) & OTC_ROUTES)
+        if set(r.get("route", [])) & OTC_ROUTES:
+            return True
+        return is_medicinal_topical(r.get("generic_name") or "")
     return False
 
 def tidy(s):
@@ -41,7 +62,7 @@ FORM_WORDS = r"""\b(\d+(\.\d+)?\s*(mg|mcg|g|ml|%|meq|units?|iu)|tablets?|tabs?|c
     injection|injectable|solution|suspension|syrup|elixir|oral|topical|ophthalmic|nasal|
     extended|delayed|immediate|controlled|sustained|release|er|xr|xl|sr|cr|dr|odt|
     chewable|coated|film|usp|kit|spray|drops?|cream|ointment|gel|patch|inhaler|powder|
-    lozenges?|liquid|concentrate|for|in|with|plus)\b.*$"""
+    lozenges?|liquid|concentrate|for|in|with|plus)(?![a-z0-9]).*$"""
 FORM_RE = re.compile(FORM_WORDS, re.I | re.X)
 # Salt suffixes that vary between products but not in how people (or recall
 # notices) refer to the drug. Only stripped from multi-word ingredients.
@@ -76,7 +97,16 @@ DESCRIPTIVE = {"pain", "reliever", "relief", "extra", "strength", "maximum", "re
                "coated", "enteric", "low", "dose", "dye", "free", "concentrated", "oral", "suspension",
                "mucus", "chest", "congestion", "decongestant", "antihistamine", "motion", "sickness",
                "nausea", "anti", "diarrheal", "itch", "allergies", "care", "health", "pharmacy",
-               "brand", "value", "premium", "quality", "choice", "basic", "signature", "select"}
+               "brand", "value", "premium", "quality", "choice", "basic", "signature", "select",
+               # packaging words on tubes, boxes and bottles that OCR reads before the name
+               "cream", "creme", "ointment", "lotion", "balm", "white", "clear", "skin", "medicated",
+               "treatment", "remover", "wart", "antifungal", "dandruff", "first", "ultra", "max",
+               "relieving", "itch", "rash", "diaper", "muscle", "rub", "foot", "athlete's", "athletes",
+               "jock", "ringworm", "hair", "scalp", "shampoo", "sun", "burn", "lip", "sore", "throat",
+               "ear", "wax", "mouth", "tooth", "teeth", "sensitive", "whitening", "toothpaste", "rinse",
+               "antiseptic", "antibiotic", "antibacterial", "ointments", "creams", "patch", "patches",
+               "roll", "on", "stick", "wipes", "pads", "spray", "mist", "cough", "syrup", "tablets",
+               "kids", "baby", "toddler", "menthol", "cooling", "warming", "penetrating", "therapy"}
 
 def is_descriptive(brand, generic):
     words = re.findall(r"[a-z0-9&']+", brand.lower())
@@ -90,10 +120,17 @@ def strip_retailer(brand):
             return brand[len(r):].strip(" -:")
     return brand
 
+LEADING_STRENGTH = re.compile(r"^\s*\d+(\.\d+)?\s*(mg|mcg|g|ml|%|meq|units?|iu)\s+", re.I)
+
+# Sunscreens and the like aren't medications anyone tracks for recalls.
+COSMETIC = re.compile(r"sunscreen|sunblock|\bspf|broad spectrum|titanium dioxide|avobenzone|octinoxate|"
+                      r"octocrylene|homosalate|oxybenzone|octisalate|sanitizer|hand wash|handwash|hand soap", re.I)
+
 def clean_generic(g):
     ingredients = re.split(r",|/|\band\b", g.lower())
     out = []
     for ing in ingredients:
+        ing = LEADING_STRENGTH.sub("", ing)
         ing = FORM_RE.sub("", ing).strip(" ,-")
         words = ing.split()
         while len(words) > 1 and words[-1] in SALTS:
@@ -112,6 +149,8 @@ def main():
         if not keep(r):
             continue
         if "KIT" in (r.get("dosage_form") or ""):
+            continue
+        if COSMETIC.search((r.get("brand_name") or "") + " " + (r.get("generic_name") or "")):
             continue
         brand, generic = tidy(r.get("brand_name")), clean_generic(tidy(r.get("generic_name")))
         if not generic:

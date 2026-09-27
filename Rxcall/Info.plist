@@ -8,6 +8,10 @@
 	<array>
 		<string>org.finalstretch.rxcall.refresh</string>
 	</array>
+	<!-- Only standard HTTPS, which is exempt — so App Store Connect doesn't
+	     stop every build to ask about encryption. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>fetch</string>

@@ -1,6 +1,6 @@
-# Contributing to Rx-call
+# Contributing to Rxcall
 
-Thanks for your interest. Rx-call is a free, open-source iOS app; contributions of code, documentation, and testing are welcome.
+Thanks for your interest. Rxcall is a free, open-source iOS app; contributions of code, documentation, and testing are welcome.
 
 ## Ground rules
 
