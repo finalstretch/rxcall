@@ -43,6 +43,14 @@ enum Demo {
     /// `-settings`: open the settings sheet on launch.
     static var showsSettings: Bool { ProcessInfo.processInfo.arguments.contains("-settings") }
 
+    /// `-screen medication` / `-screen recall`: push that screen on launch,
+    /// so App Store screenshots can be captured from the command line.
+    static var screen: String? {
+        let args = ProcessInfo.processInfo.arguments
+        guard let i = args.firstIndex(of: "-screen"), i + 1 < args.count else { return nil }
+        return args[i + 1]
+    }
+
     static var medicationNames: [String]? {
         let args = ProcessInfo.processInfo.arguments
         guard let i = args.firstIndex(of: "-demo"), i + 1 < args.count else { return nil }

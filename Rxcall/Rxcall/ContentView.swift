@@ -19,13 +19,14 @@ struct ContentView: View {
             }
         }
     }
+    @State private var path = NavigationPath()
     @State private var sheet: Sheet?
     @State private var nextSheet: Sheet?
     @AppStorage("hasSeenScanTutorial") private var hasSeenScanTutorial = false
     @State private var store = RecallStore()
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $path) {
             Group {
                 if medications.isEmpty {
                     emptyState
@@ -99,6 +100,12 @@ struct ContentView: View {
                 if Demo.showsTutorial { sheet = .tutorial }
                 if Demo.showsSettings { sheet = .settings }
                 if Demo.isActive { await store.checkAll(medications) }
+                if let screen = Demo.screen, let med = medications.first {
+                    path.append(med)
+                    if screen == "recall", let match = store.matches(for: med)?.first {
+                        path.append(RecallRoute(match: match, medication: med))
+                    }
+                }
             }
             #endif
             .alert("Couldn't check", isPresented: Binding(get: { store.errorMessage != nil },
