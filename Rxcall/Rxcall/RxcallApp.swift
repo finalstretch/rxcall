@@ -22,6 +22,7 @@ struct RxcallApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .textSized()
         }
         .modelContainer(container)
         .onChange(of: scenePhase) { _, phase in
@@ -39,6 +40,8 @@ enum Demo {
 
     /// `-tutorial`: forget that the scan tutorial was seen and open the scan flow.
     static var showsTutorial: Bool { ProcessInfo.processInfo.arguments.contains("-tutorial") }
+    /// `-settings`: open the settings sheet on launch.
+    static var showsSettings: Bool { ProcessInfo.processInfo.arguments.contains("-settings") }
 
     static var medicationNames: [String]? {
         let args = ProcessInfo.processInfo.arguments

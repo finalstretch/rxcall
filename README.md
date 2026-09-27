@@ -1,6 +1,6 @@
-<img src="docs/icon.png" width="88" align="left" alt="Rx-call icon" hspace="14">
+<img src="docs/icon.png" width="88" align="left" alt="Rxcall icon" hspace="14">
 
-# Rx-call
+# Rxcall
 
 **An iOS app that watches the FDA's drug recall feed for the medications you actually take — and tells you, in plain language, whether the bottle on your counter is affected.**
 
@@ -25,7 +25,7 @@ Classification: Class II
 
 A person taking metformin doesn't read the FDA's weekly enforcement report. They find out from a news story weeks later, if at all — and then can't tell whether *their* bottle is the recalled one.
 
-Rx-call closes that gap. You keep a list of what you take on your phone; the app checks it against the recall feed and shows you only what affects you, with the lot numbers to compare against your bottle and what to do next.
+Rxcall closes that gap. You keep a list of what you take on your phone; the app checks it against the recall feed and shows you only what affects you, with the lot numbers to compare against your bottle and what to do next.
 
 ## How it works
 
@@ -57,7 +57,7 @@ Early development. Not yet on the App Store.
 
 ## Not medical advice
 
-Rx-call surfaces public recall information. It does not diagnose, recommend treatment, or determine whether you should stop or change a medication. Talk to your pharmacist or doctor.
+Rxcall surfaces public recall information. It does not diagnose, recommend treatment, or determine whether you should stop or change a medication. Talk to your pharmacist or doctor.
 
 ## License
 

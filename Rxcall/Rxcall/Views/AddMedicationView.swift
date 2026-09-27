@@ -125,7 +125,7 @@ struct AddMedicationView: View {
                 } header: {
                     Text("From the bottle")
                 } footer: {
-                    Text("The NDC is a code like 68462-521-90 — on the pharmacy label if you're lucky, otherwise on the box by the barcode. Adding it lets Rx-call tell you a recall definitely covers your bottle, not just your medication.")
+                    Text("The NDC is a code like 68462-521-90 — on the pharmacy label if you're lucky, otherwise on the box by the barcode. Adding it lets Rxcall tell you a recall definitely covers your bottle, not just your medication.")
                 }
             }
             .navigationTitle("Add medication")
@@ -133,15 +133,18 @@ struct AddMedicationView: View {
             .sheet(item: $sheet, onDismiss: {
                 if scanAfterTutorial { scanAfterTutorial = false; sheet = .scanner }
             }) { which in
-                switch which {
-                case .tutorial:
-                    ScanTutorialView {
-                        hasSeenScanTutorial = true
-                        scanAfterTutorial = true
+                Group {
+                    switch which {
+                    case .tutorial:
+                        ScanTutorialView {
+                            hasSeenScanTutorial = true
+                            scanAfterTutorial = true
+                        }
+                    case .scanner:
+                        scanner
                     }
-                case .scanner:
-                    scanner
                 }
+                .textSized()
             }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {

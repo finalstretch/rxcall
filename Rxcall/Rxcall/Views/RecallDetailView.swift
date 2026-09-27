@@ -17,7 +17,7 @@ struct RecallDetailView: View {
         if let lot = medication?.lotNumber { lines.append("My bottle's lot: \(lot)") }
         lines.append("")
         lines.append("FDA record: https://www.accessdata.fda.gov/scripts/ires/index.cfm?Product=\(recall.recallNumber)")
-        lines.append("Shared from Rx-call. Not medical advice — check with a pharmacist.")
+        lines.append("Shared from Rxcall. Not medical advice — check with a pharmacist.")
         return lines.joined(separator: "\n")
     }
 

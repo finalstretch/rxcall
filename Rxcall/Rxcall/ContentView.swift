@@ -11,16 +11,16 @@ struct ContentView: View {
     /// Hand-offs go through onDismiss, since a sheet can't be presented while
     /// another is dismissing.
     private enum Sheet: Identifiable {
-        case typing, tutorial, scanner, form(ScanResult)
+        case typing, tutorial, scanner, form(ScanResult), settings
         var id: String {
             switch self {
-            case .typing: "typing"; case .tutorial: "tutorial"; case .scanner: "scanner"; case .form: "form"
+            case .typing: "typing"; case .tutorial: "tutorial"; case .scanner: "scanner"
+            case .form: "form"; case .settings: "settings"
             }
         }
     }
     @State private var sheet: Sheet?
     @State private var nextSheet: Sheet?
-    @State private var confirmingRemoveAll = false
     @AppStorage("hasSeenScanTutorial") private var hasSeenScanTutorial = false
     @State private var store = RecallStore()
 
@@ -33,7 +33,7 @@ struct ContentView: View {
                     list
                 }
             }
-            .navigationTitle("Rx-call")
+            .navigationTitle("Rxcall")
             // Every destination is registered here, at the root of the stack.
             // Declaring them inside pushed screens resolves unreliably.
             .navigationDestination(for: Medication.self) { med in
@@ -44,15 +44,9 @@ struct ContentView: View {
                     .onAppear { store.markSeen(route.match, for: route.medication) }
             }
             .toolbar {
-                if !medications.isEmpty {
-                    ToolbarItem(placement: .primaryAction) {
-                        Menu {
-                            Button(role: .destructive) { confirmingRemoveAll = true } label: {
-                                Label("Remove all medications", systemImage: "trash")
-                            }
-                        } label: {
-                            Label("More", systemImage: "ellipsis.circle")
-                        }
+                ToolbarItem(placement: .primaryAction) {
+                    Button { sheet = .settings } label: {
+                        Label("Settings", systemImage: "gear")
                     }
                 }
                 #if DEBUG
@@ -76,40 +70,37 @@ struct ContentView: View {
             .sheet(item: $sheet, onDismiss: {
                 if let n = nextSheet { nextSheet = nil; sheet = n }
             }) { which in
-                switch which {
-                case .typing:
-                    AddMedicationView()
-                case .tutorial:
-                    ScanTutorialView {
-                        hasSeenScanTutorial = true
-                        nextSheet = .scanner
+                Group {
+                    switch which {
+                    case .typing:
+                        AddMedicationView()
+                    case .tutorial:
+                        ScanTutorialView {
+                            hasSeenScanTutorial = true
+                            nextSheet = .scanner
+                        }
+                    case .scanner:
+                        ScanView { result in nextSheet = .form(result) }
+                    case .form(let result):
+                        AddMedicationView(prefill: result)
+                    case .settings:
+                        SettingsView()
                     }
-                case .scanner:
-                    ScanView { result in nextSheet = .form(result) }
-                case .form(let result):
-                    AddMedicationView(prefill: result)
                 }
+                .textSized()
             }
             .sheet(isPresented: Binding(get: { !hasSeenNotice }, set: { _ in })) {
                 NoticeView { hasSeenNotice = true }
                     .interactiveDismissDisabled()
+                    .textSized()
             }
             #if DEBUG
             .task {
                 if Demo.showsTutorial { sheet = .tutorial }
+                if Demo.showsSettings { sheet = .settings }
                 if Demo.isActive { await store.checkAll(medications) }
             }
             #endif
-            .confirmationDialog(
-                "Remove all \(medications.count) medication\(medications.count == 1 ? "" : "s")?",
-                isPresented: $confirmingRemoveAll, titleVisibility: .visible
-            ) {
-                Button("Remove all", role: .destructive) {
-                    for med in medications { context.delete(med) }
-                }
-            } message: {
-                Text("Rx-call will stop checking recalls for them. This can't be undone, but you can add them again any time.")
-            }
             .alert("Couldn't check", isPresented: Binding(get: { store.errorMessage != nil },
                                                           set: { if !$0 { store.errorMessage = nil } })) {
                 Button("OK") {}
@@ -124,7 +115,7 @@ struct ContentView: View {
         ContentUnavailableView {
             Label("No medications yet", systemImage: "pills")
         } description: {
-            Text("Add what you take and Rx-call will check the FDA's recall list for it. Your list stays on this phone.")
+            Text("Add what you take and Rxcall will check the FDA's recall list for it. Your list stays on this phone.")
         } actions: {
             VStack(spacing: 12) {
                 Button {
