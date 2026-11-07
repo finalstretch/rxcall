@@ -17,6 +17,7 @@ struct RxcallApp: App {
 
     init() {
         BackgroundRefresh.register(container: container)
+        NotificationRouter.start()
     }
 
     var body: some Scene {
@@ -42,6 +43,16 @@ enum Demo {
     static var showsTutorial: Bool { ProcessInfo.processInfo.arguments.contains("-tutorial") }
     /// `-settings`: open the settings sheet on launch.
     static var showsSettings: Bool { ProcessInfo.processInfo.arguments.contains("-settings") }
+
+    /// `-notification metformin` (or `metformin:D-1234-2026`): start as though
+    /// a recall notification naming that medication had been tapped, carrying
+    /// exactly what `BackgroundRefresh` puts in one.
+    static var tappedNotification: (name: String, recall: String?)? {
+        let args = ProcessInfo.processInfo.arguments
+        guard let i = args.firstIndex(of: "-notification"), i + 1 < args.count else { return nil }
+        let parts = args[i + 1].split(separator: ":", maxSplits: 1)
+        return (String(parts[0]), parts.count > 1 ? String(parts[1]) : nil)
+    }
 
     /// `-screen medication` / `-screen recall`: push that screen on launch,
     /// so App Store screenshots can be captured from the command line.

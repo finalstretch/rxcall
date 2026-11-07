@@ -24,6 +24,7 @@ struct ContentView: View {
     @State private var nextSheet: Sheet?
     @AppStorage("hasSeenScanTutorial") private var hasSeenScanTutorial = false
     @State private var store = RecallStore()
+    private let router = NotificationRouter.shared
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -100,6 +101,9 @@ struct ContentView: View {
                 if Demo.showsTutorial { sheet = .tutorial }
                 if Demo.showsSettings { sheet = .settings }
                 if Demo.isActive { await store.checkAll(medications) }
+                if let tap = Demo.tappedNotification {
+                    router.pending = .init(medicationName: tap.name, recallNumber: tap.recall)
+                }
                 if let screen = Demo.screen, let med = medications.first {
                     path.append(med)
                     if screen == "recall", let match = store.matches(for: med)?.first {
@@ -108,6 +112,14 @@ struct ContentView: View {
                 }
             }
             #endif
+            // A tapped recall notification can arrive before this screen
+            // exists, so read the pending one as well as watching for new.
+            .onChange(of: router.pending) { _, target in
+                if let target { open(target) }
+            }
+            .task {
+                if let target = router.pending { open(target) }
+            }
             .alert("Couldn't check", isPresented: Binding(get: { store.errorMessage != nil },
                                                           set: { if !$0 { store.errorMessage = nil } })) {
                 Button("OK") {}
@@ -201,6 +213,35 @@ struct ContentView: View {
             ?? "Background check failed (network)."
     }
     #endif
+
+    /// A tapped recall notification: open that medication, and the recall
+    /// itself when the notification named just one. Clears the request either
+    /// way — a notification for a medication since removed just lands here.
+    private func open(_ target: NotificationRouter.Target) {
+        defer { router.pending = nil }
+        guard hasSeenNotice,
+              let medication = medications.first(where: {
+                  $0.name.caseInsensitiveCompare(target.medicationName) == .orderedSame
+              })
+        else { return }
+        sheet = nil
+        nextSheet = nil
+        var destination = NavigationPath()
+        destination.append(medication)
+        path = destination
+
+        // The recall goes on in the next runloop turn. Pushing both levels in
+        // one update makes NavigationStack fault ("tried to update multiple
+        // times per frame") — it happens to arrive, but it isn't a promise
+        // SwiftUI makes.
+        guard let number = target.recallNumber,
+              let match = store.matches(for: medication)?
+                  .first(where: { $0.recall.recallNumber == number })
+        else { return }
+        DispatchQueue.main.async {
+            path.append(RecallRoute(match: match, medication: medication))
+        }
+    }
 
     private func delete(at offsets: IndexSet) {
         for i in offsets { delete(medications[i]) }
