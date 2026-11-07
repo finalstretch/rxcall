@@ -134,7 +134,7 @@ struct ContentView: View {
         ContentUnavailableView {
             Label("No medications yet", systemImage: "pills")
         } description: {
-            Text("Add what you take and Rxcall will check the FDA's recall list for it. Your list stays on this phone.")
+            Text("Add what you take and Rxcall will check the U.S. FDA's recall list for it. Your list stays on this phone.")
         } actions: {
             VStack(spacing: 12) {
                 Button {
