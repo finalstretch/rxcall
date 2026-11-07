@@ -102,7 +102,7 @@ struct SettingsView: View {
                 } header: {
                     Text("About")
                 } footer: {
-                    Text("Rxcall is a free, open-source project. It shows public recall notices from the FDA for medications you list. It is not medical advice: it can't tell you whether to stop, start, or change a medication — only your pharmacist or doctor can. It does not diagnose, recommend treatment, or interpret test results.")
+                    Text("Rxcall is a free, open-source project. It is not affiliated with, endorsed by, or reviewed by the FDA or the National Library of Medicine. It shows public recall notices from the U.S. FDA for medications you list. It is not medical advice: it can't tell you whether to stop, start, or change a medication — only your pharmacist or doctor can. It does not diagnose, recommend treatment, or interpret test results.")
                 }
 
                 if !medications.isEmpty {
@@ -146,6 +146,8 @@ private struct DataSourcesView: View {
                 Link("openFDA drug recalls", destination: URL(string: "https://open.fda.gov/apis/drug/enforcement/")!)
             } header: {
                 Text("Recalls")
+            } footer: {
+                Text("These are United States recalls only. A medication bought in another country won't show a recall here even if it has been recalled where it was sold, so “no ongoing recalls” means the FDA hasn't recalled it — not that no one has.")
             }
 
             Section {
@@ -159,6 +161,12 @@ private struct DataSourcesView: View {
                 Text("The list of drug names Rxcall recognises when you type or scan is built from the FDA's National Drug Code directory and stored inside the app, so scanning a label never sends the label anywhere.")
             } header: {
                 Text("Drug names")
+            }
+
+            Section {
+                Text("Rxcall is an independent, free, open-source project. It is not affiliated with, endorsed by, or reviewed by the FDA or the National Library of Medicine. It only reads what they publish.")
+            } header: {
+                Text("Who makes Rxcall")
             }
 
             Section {

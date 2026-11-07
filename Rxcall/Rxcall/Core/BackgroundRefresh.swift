@@ -89,7 +89,11 @@ enum Notifications {
                 : "\(n) new recalls. Open Rxcall to check the lot numbers."
         }
         content.sound = .default
-        content.userInfo = ["medication": medication.name]
+        // Route straight to the recall when there's only one; with several,
+        // the medication screen that lists them all is the better landing.
+        content.userInfo = n == 1
+            ? ["medication": medication.name, "recall": new[0].recall.recallNumber]
+            : ["medication": medication.name]
         let request = UNNotificationRequest(
             identifier: "recall-\(medication.persistentModelID.hashValue)",
             content: content,
