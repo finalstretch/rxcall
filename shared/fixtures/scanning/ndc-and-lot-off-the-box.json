@@ -1,0 +1,53 @@
+{
+  "expected" : {
+    "candidates" : [
+      {
+        "frames" : 3,
+        "name" : "Metformin",
+        "votes" : 9
+      }
+    ],
+    "framesSeen" : 3,
+    "leader" : "Metformin",
+    "lotNumber" : "A4B291",
+    "ndc" : "68462-521-90",
+    "stableAtFrame" : 2,
+    "strength" : "500 mg"
+  },
+  "input" : {
+    "frames" : [
+      {
+        "barcodes" : [
+
+        ],
+        "text" : [
+          "METFORMIN HYDROCHLORIDE",
+          "500 mg",
+          "NDC 68462-521-90"
+        ]
+      },
+      {
+        "barcodes" : [
+
+        ],
+        "text" : [
+          "METFORMIN",
+          "LOT A4B291",
+          "EXP 08/2027"
+        ]
+      },
+      {
+        "barcodes" : [
+
+        ],
+        "text" : [
+          "METFORMIN HYDROCHLORIDE",
+          "500 mg"
+        ]
+      }
+    ]
+  },
+  "kind" : "scanning",
+  "name" : "ndc-and-lot-off-the-box",
+  "why" : "Pharmacy labels usually omit both; this is the manufacturer's box, where they sit near the barcode and the expiry."
+}

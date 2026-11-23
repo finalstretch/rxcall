@@ -98,6 +98,7 @@ struct ContentView: View {
             }
             #if DEBUG
             .task {
+                if FixtureRecorder.isRequested { FixtureRecorder.run() }
                 if Demo.showsTutorial { sheet = .tutorial }
                 if Demo.showsSettings { sheet = .settings }
                 if Demo.isActive { await store.checkAll(medications) }
