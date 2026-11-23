@@ -49,6 +49,12 @@ enum RecallGlossary {
          "The product may be counterfeit or tampered with."),
     ]
 
+    #if DEBUG
+    /// The table itself, for `FixtureRecorder` to export as shared data that
+    /// Android reads instead of transcribing it out of Swift by hand.
+    static var allEntries: [(keywords: [String], explanation: String)] { entries }
+    #endif
+
     static func explanation(for reason: String) -> String? {
         let r = reason.lowercased()
         return entries.first { $0.keywords.contains { r.contains($0) } }?.explanation

@@ -1,0 +1,62 @@
+{
+  "expected" : {
+    "candidates" : [
+      {
+        "frames" : 2,
+        "name" : "Hydrocortisone",
+        "votes" : 6
+      },
+      {
+        "frames" : 2,
+        "name" : "Hydrocortisone acetate pramoxine",
+        "votes" : 2
+      },
+      {
+        "frames" : 2,
+        "name" : "hydrocortisone acetate pramoxine HCl",
+        "votes" : 2
+      }
+    ],
+    "framesSeen" : 3,
+    "leader" : "Hydrocortisone",
+    "lotNumber" : null,
+    "ndc" : null,
+    "stableAtFrame" : 3,
+    "strength" : "1 %"
+  },
+  "input" : {
+    "frames" : [
+      {
+        "barcodes" : [
+
+        ],
+        "text" : [
+          "WHITE CREAM",
+          "NET WT 30 G"
+        ]
+      },
+      {
+        "barcodes" : [
+
+        ],
+        "text" : [
+          "HYDROCORTISONE",
+          "1%",
+          "ANTI-ITCH"
+        ]
+      },
+      {
+        "barcodes" : [
+
+        ],
+        "text" : [
+          "HYDROCORTISONE CREAM",
+          "1%"
+        ]
+      }
+    ]
+  },
+  "kind" : "scanning",
+  "name" : "white-cream-needs-two-frames",
+  "why" : "The bug found on a real tube: one frame reading only packaging words must not lock in a match. Locks in only once the ingredient has been read in two separate frames."
+}

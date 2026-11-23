@@ -1,0 +1,71 @@
+{
+  "expected" : {
+    "explanations" : {
+      "At FDA's Recommendation" : "The manufacturer recalled it at the FDA's request. The FDA's page for this recall has the specific reason.",
+      "CGMP Deviations" : "The factory broke a manufacturing or record-keeping rule. This is often about paperwork or process, not a known problem with the product itself — but the FDA recalls it to be safe.",
+      "Child-Resistant Packaging Failure" : "The packaging doesn't meet a safety rule — often that the cap isn't child-resistant. The medicine itself is usually unaffected.",
+      "Counterfeit" : "The product may be counterfeit or tampered with.",
+      "Defective Container" : "The bottle, cartridge, or dispenser is faulty — it may leak, not seal properly, or not dispense correctly.",
+      "Discoloration" : "The product changed in appearance — discoloration or crystals — which can mean it's degrading.",
+      "Failed Dissolution Specifications" : "Tablets may not dissolve properly, so the medication may be released too slowly or unevenly.",
+      "Failed Impurities/Degradation Specifications" : "Testing found the medication breaking down, or an impurity, beyond the limit the FDA allows.",
+      "Failed Stability Specifications" : "The product may lose strength before its expiration date.",
+      "Failed Tablet/Capsule Specifications: imprint" : "The marking stamped on the tablets or capsules is wrong or missing, so they could be confused with another medication.",
+      "Failed USP Dissolution Test Requirements" : "Tablets may not dissolve properly, so the medication may be released too slowly or unevenly.",
+      "Labeling: Label Error on Declared Strength" : "The label on some packages is wrong — it may name a different drug, strength, or count than what's inside.",
+      "Lack of Assurance of Sterility" : "The manufacturer couldn't show that its process was properly controlled. Often a paperwork or process issue rather than a known problem with the product.",
+      "Lack of Processing Controls" : "The manufacturer couldn't show that its process was properly controlled. Often a paperwork or process issue rather than a known problem with the product.",
+      "Marketed Without an Approved NDA/ANDA" : "The product was sold without FDA approval or outside what its approval allows.",
+      "Presence of Foreign Tablets/Capsules" : "Some bottles may contain a different medication than the label says.",
+      "Presence of Nitrosamine Impurity (NDMA)" : "Testing found a nitrosamine impurity above the level the FDA allows. The amount matters, and the FDA's page for this recall has the details.",
+      "Presence of Particulate Matter" : "Small particles (like glass or fibers) were found in the product. Most serious for injections.",
+      "Product Mix-Up" : "Some bottles may contain a different medication than the label says.",
+      "Some entirely novel reason the glossary has never seen" : null,
+      "Subpotent Drug" : "Some doses may be weaker than the label says, so they may not work as expected.",
+      "Superpotent Drug" : "Some doses may be stronger than the label says.",
+      "Temperature Excursion During Shipping" : "The product was exposed to temperatures outside its safe range during storage or shipping."
+    },
+    "whatToDo" : {
+      "Class I" : "Don't take another dose until you've talked to your pharmacist — call today, or call the number on the recall. Don't throw the bottle away yet; they may want the lot number.",
+      "Class II" : "Don't stop taking it on your own. Check the lot number against your bottle, and call or visit your pharmacist — they can replace it if it's affected.",
+      "Class III" : "This kind of recall rarely affects your health. Mention it at your next refill, or ask your pharmacist if you're unsure.",
+      "Unclassified" : "Don't stop taking a medication on your own. Take your bottle to your pharmacist, or call them, and ask whether it's part of this recall and what to do next."
+    }
+  },
+  "input" : {
+    "classifications" : [
+      "Class I",
+      "Class II",
+      "Class III",
+      "Unclassified"
+    ],
+    "reasons" : [
+      "CGMP Deviations",
+      "Failed Impurities/Degradation Specifications",
+      "Presence of Foreign Tablets/Capsules",
+      "Labeling: Label Error on Declared Strength",
+      "Superpotent Drug",
+      "Subpotent Drug",
+      "Presence of Nitrosamine Impurity (NDMA)",
+      "Failed Dissolution Specifications",
+      "Lack of Assurance of Sterility",
+      "Presence of Particulate Matter",
+      "Failed Stability Specifications",
+      "Defective Container",
+      "Marketed Without an Approved NDA/ANDA",
+      "Failed Tablet/Capsule Specifications: imprint",
+      "Discoloration",
+      "Child-Resistant Packaging Failure",
+      "Temperature Excursion During Shipping",
+      "Product Mix-Up",
+      "Lack of Processing Controls",
+      "Counterfeit",
+      "Failed USP Dissolution Test Requirements",
+      "At FDA's Recommendation",
+      "Some entirely novel reason the glossary has never seen"
+    ]
+  },
+  "kind" : "glossary",
+  "name" : "reasons-and-guidance",
+  "why" : "Every glossary entry has at least one reason string that must reach it, plus the four guidance branches. An unmatched reason returns null, which the UI treats as 'show the FDA's own words'."
+}

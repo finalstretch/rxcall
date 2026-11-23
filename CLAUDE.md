@@ -145,9 +145,40 @@ The original idea was a **FEWS NET** (Famine Early Warning Systems Network) clie
 
 ---
 
+## Repository layout — two platforms, one contract
+
+```
+ios/        Swift, SwiftUI. Shipped on the App Store. PRIMARY.
+android/    Kotlin, Compose. Follows iOS. Not scaffolded yet.
+shared/     What both must agree on: data, fixtures, PARITY.md
+tools/      Build and recording scripts
+```
+
+Each platform has its own `CLAUDE.md` with language conventions. Everything in
+*this* file applies to both.
+
+**iOS is primary.** It's the shipped implementation and it's what Android is
+held to. A change under `ios/Rxcall/Rxcall/Core/` lands with the Android
+equivalent in the same PR, or adds a row to `shared/PARITY.md` saying Android
+is behind and why. Never silently.
+
+**The contract is executable, not written.** `shared/fixtures/` holds inputs
+and the outputs the real iOS code produced for them, recorded by
+`tools/record_fixtures.sh`. Both platforms run them as tests. A written spec
+would drift the first time someone forgot to update it; a fixture can't,
+because it fails.
+
+To change behaviour, change the fixture first, then both implementations, and
+say in the PR why the expected value moved.
+
+**Core must be at parity. UI must not be.** A Compose app that imitates
+SwiftUI is wrong on Android. The fixtures pin behaviour and say nothing about
+pixels, deliberately.
+
 ## Quick orientation for a new session
 
 1. Read `DECISIONS.md` in the repo you're working in — it's the record of what's already been settled and why.
+1. In Rxcall, read `shared/PARITY.md` and the `CLAUDE.md` for the platform you're touching.
 2. Check which app repo you're in; the safety rules above are strictest for the clinical trial app.
 3. If a proposed change touches any of the four hard constraints, stop and flag it rather than implementing a variant.
 4. Open a PR. The other sibling reviews it.

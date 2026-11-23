@@ -1,0 +1,108 @@
+{
+  "expected" : [
+    {
+      "confidence" : "name",
+      "mentionsStrength" : false,
+      "recallNumber" : "D-0444-2026"
+    },
+    {
+      "confidence" : "name",
+      "mentionsStrength" : false,
+      "recallNumber" : "D-0508-2023"
+    },
+    {
+      "confidence" : "name",
+      "mentionsStrength" : false,
+      "recallNumber" : "D-0509-2023"
+    },
+    {
+      "confidence" : "name",
+      "mentionsStrength" : false,
+      "recallNumber" : "D-0507-2023"
+    }
+  ],
+  "input" : {
+    "medication" : {
+      "genericName" : "alprazolam",
+      "name" : "Alprazolam",
+      "ndc" : null,
+      "strength" : null
+    },
+    "recalls" : [
+      {
+        "classification" : "Class II",
+        "code_info" : "Lots: a) 03FE2318, Exp. 8/31/24; b) 27FE2315, 28FE2313, 02MA2306, 21SE2201, 16NO2216, 17NO2216, 24FA2314, Exp. 8/31/24; 17FE2203, 12AP2204, 17MA2205, Exp. 3/31/23; 21JU2206, 22JU2220, 12JY2206, Exp. 5/31/23; 10AU2209, Exp. 6/30/23; 14DE2215, Exp. 9/30/24; 05JA2304, 27JA2301, Exp. 11/30/24.",
+        "distribution_pattern" : "Nationwide in the USA",
+        "openfda" : {
+
+        },
+        "product_description" : "Alprazolam C-IV, 1 mg, packaged in a) 30 Tabs per bottle, NDC 72189-213-30; b) 60 Tabs per bottle, NDC 72189-213-60; Rx only, Packaged and Distributed By: Direct Rx Dawsonville, GA 30534.",
+        "reason_for_recall" : "CGMP Deviations: Repackaging firm recalling due to potential product cross contamination concerns at the manufacturer.",
+        "recall_initiation_date" : "20230322",
+        "recall_number" : "D-0508-2023",
+        "recalling_firm" : "Direct Rx",
+        "report_date" : "20230412",
+        "status" : "Ongoing"
+      },
+      {
+        "classification" : "Class II",
+        "code_info" : "Lots: 03FE2319 Exp. 2/28/25, 13MY2217 Exp. 5/31/23",
+        "distribution_pattern" : "Nationwide in the USA",
+        "openfda" : {
+
+        },
+        "product_description" : "Alprazolam C-IV, 2 mg, 60 Tabs per bottle, Rx only, Packaged and Distributed By: Direct Rx Dawsonville, GA 30534, NDC 72189-121-60.",
+        "reason_for_recall" : "CGMP Deviations: Repackaging firm recalling due to potential product cross contamination concerns at the manufacturer.",
+        "recall_initiation_date" : "20230322",
+        "recall_number" : "D-0509-2023",
+        "recalling_firm" : "Direct Rx",
+        "report_date" : "20230412",
+        "status" : "Ongoing"
+      },
+      {
+        "classification" : "Class II",
+        "code_info" : "Lot# 8177156, Exp Date: 02/28/2027",
+        "distribution_pattern" : "US Nationwide.",
+        "openfda" : {
+          "brand_name" : [
+            "XANAX"
+          ],
+          "generic_name" : [
+            "ALPRAZOLAM"
+          ],
+          "product_ndc" : [
+            "58151-505",
+            "58151-503",
+            "58151-504",
+            "58151-506"
+          ]
+        },
+        "product_description" : "Xanax XR, alprazolam, extended-release tablets, 3 mg, 60 Tablets bottles, Rx only, Distributed by: Viatris Specialty LLC, Morgantown, WV 06506, U.S.A, Made in Ireland, NDC 58151-506-91",
+        "reason_for_recall" : "Failed Dissolution Specifications",
+        "recall_initiation_date" : "20260317",
+        "recall_number" : "D-0444-2026",
+        "recalling_firm" : "Viatris, Inc.",
+        "report_date" : "20260415",
+        "status" : "Ongoing"
+      },
+      {
+        "classification" : "Class II",
+        "code_info" : "Lot: 11AP2219 Exp. 4/30/23",
+        "distribution_pattern" : "Nationwide in the USA",
+        "openfda" : {
+
+        },
+        "product_description" : "Alprazolam C-IV, 0.5 mg, 30 Tabs per bottle, Rx only, Packaged and Distributed By: Direct Rx Dawsonville, GA 30534, NDC 72189-0240-30.",
+        "reason_for_recall" : "CGMP Deviations: Repackaging firm recalling due to potential product cross contamination concerns at the manufacturer.",
+        "recall_initiation_date" : "20230322",
+        "recall_number" : "D-0507-2023",
+        "recalling_firm" : "Direct Rx",
+        "report_date" : "20230412",
+        "status" : "Ongoing"
+      }
+    ]
+  },
+  "kind" : "matching",
+  "name" : "plain-name-sorts-newest-first",
+  "why" : "Nothing to discriminate on: same class, no NDC, no strength. Newest recall first."
+}
