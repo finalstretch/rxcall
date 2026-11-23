@@ -3,15 +3,45 @@
 Not scaffolded yet. The structure, rules and behavioural contract are in place
 first, so the port has something to be held to.
 
-## Setup
+## Setup — already done on this machine
 
-Nothing is installed on the build machine yet — no JDK, no Android SDK, no
-Android Studio.
+There is no Homebrew here, so everything was installed by direct download into
+the user's home directory, the same way `gh` was. No `sudo`, nothing in
+`/usr/local`.
+
+| | Version | Location |
+|---|---|---|
+| Temurin JDK | 21.0.13.1+2 LTS | `~/Library/Java/JavaVirtualMachines/` |
+| Android SDK command-line tools | 23.0 | `~/Library/Android/sdk/cmdline-tools/latest` |
+| Platform-tools (`adb`) | 37.0.3 | `~/Library/Android/sdk/platform-tools` |
+| Platform | android-36 | `~/Library/Android/sdk/platforms` |
+| Build-tools | 36.1.0 | `~/Library/Android/sdk/build-tools` |
+| Emulator | 37.3.10 | `~/Library/Android/sdk/emulator` |
+| System image | android-36 google_apis arm64-v8a | `~/Library/Android/sdk/system-images` |
+| Gradle | 9.9.2 | `~/.local/gradle-9.9.2` |
+
+About 6.5 GB in total. `~/.zshrc` exports `JAVA_HOME`, `ANDROID_HOME` and the
+PATH entries; an AVD named `rxcall-api36` (Pixel 7, Android 16) already exists.
+
+Real projects use the Gradle wrapper, so the system Gradle above is only for
+generating one and for throwaway builds.
+
+## What a probe build found
+
+A minimal project was built end to end to check the toolchain, and it turned
+up one thing worth knowing before scaffolding the real app:
+
+**AGP 9 has built-in Kotlin support.** Adding `org.jetbrains.kotlin.android`
+is not merely redundant, it fails the build outright:
 
 ```
-brew install --cask temurin@21        # arm64 JDK
-brew install --cask android-studio    # or just the commandline-tools
+The 'org.jetbrains.kotlin.android' plugin is no longer required for
+Kotlin support since AGP 9.0.
 ```
+
+Nearly every Android tutorial still lists both plugins. Use only
+`com.android.application`. Current versions as of setup: AGP 9.5.2,
+Gradle 9.9.2, Kotlin 2.4.21 (supplied by AGP).
 
 ## On this machine
 
