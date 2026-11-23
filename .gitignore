@@ -21,3 +21,11 @@ xcuserdata/
 
 # Local tool settings
 .claude/
+
+# Android / Gradle build output and per-user state
+.gradle/
+local.properties
+*.apk
+*.aab
+captures/
+.cxx/

@@ -1,7 +1,16 @@
 # android/
 
-Not scaffolded yet. The structure, rules and behavioural contract are in place
-first, so the port has something to be held to.
+Scaffolded, building, and one Core file ported. `RecallGlossary` is done and
+green against the fixtures; everything else is listed in `shared/PARITY.md`.
+
+```
+./gradlew test            run the fixture tests
+./gradlew assembleDebug   build a debug APK
+adb install -r app/build/outputs/apk/debug/app-debug.apk
+```
+
+The UI is a placeholder that shows one glossary explanation, so the app builds
+and runs on a device. Real screens come once Core is ported.
 
 ## Setup — already done on this machine
 
@@ -40,8 +49,20 @@ Kotlin support since AGP 9.0.
 ```
 
 Nearly every Android tutorial still lists both plugins. Use only
-`com.android.application`. Current versions as of setup: AGP 9.5.2,
-Gradle 9.9.2, Kotlin 2.4.21 (supplied by AGP).
+`com.android.application`.
+
+**Compose still needs its own compiler plugin.** `org.jetbrains.kotlin.plugin.compose`
+is separate from the Kotlin plugin AGP absorbed, and it is required — pinned
+to the Kotlin version AGP ships, 2.4.21.
+
+**compileSdk and targetSdk are not the same number here.** AndroidX wanted 37,
+then Compose 1.13 wanted 37.1+, so `compileSdk = 37` with `compileSdkMinor = 2`.
+`targetSdk` stays at 36, because android-36 is the newest platform with an
+arm64 emulator image — the newest runtime behaviour that can actually be
+tested on this machine. Raise it when an android-37 image ships.
+
+Versions as of setup: AGP 9.5.2, Gradle 9.9.2, Kotlin 2.4.21 (supplied by
+AGP), compileSdk 37.2, targetSdk 36, minSdk 26.
 
 ## On this machine
 

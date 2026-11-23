@@ -1,0 +1,196 @@
+{
+  "entries" : [
+    {
+      "explanation" : "Some bottles may contain a different medication than the label says.",
+      "keywords" : [
+        "foreign tablet",
+        "foreign capsule",
+        "wrong tablet",
+        "mixed product",
+        "product mix"
+      ]
+    },
+    {
+      "explanation" : "The label on some packages is wrong — it may name a different drug, strength, or count than what's inside.",
+      "keywords" : [
+        "label mix",
+        "labeling: label error",
+        "mislabel",
+        "incorrect label",
+        "wrong label"
+      ]
+    },
+    {
+      "explanation" : "Some doses may be stronger than the label says.",
+      "keywords" : [
+        "superpotent",
+        "super potent",
+        "high potency",
+        "above specification"
+      ]
+    },
+    {
+      "explanation" : "Some doses may be weaker than the label says, so they may not work as expected.",
+      "keywords" : [
+        "subpotent",
+        "sub potent",
+        "low potency",
+        "below specification",
+        "failed assay"
+      ]
+    },
+    {
+      "explanation" : "Testing found a nitrosamine impurity above the level the FDA allows. The amount matters, and the FDA's page for this recall has the details.",
+      "keywords" : [
+        "ndma",
+        "nitrosamine",
+        "nitroso",
+        "ndea"
+      ]
+    },
+    {
+      "explanation" : "Testing found the medication breaking down, or an impurity, beyond the limit the FDA allows.",
+      "keywords" : [
+        "impurities/degradation",
+        "degradation",
+        "impurity",
+        "impurities"
+      ]
+    },
+    {
+      "explanation" : "The product failed one of the quality tests it's required to pass.",
+      "keywords" : [
+        "out of specification",
+        "does not meet usp",
+        "does not meet",
+        "monograph",
+        "failed specification"
+      ]
+    },
+    {
+      "explanation" : "The marking stamped on the tablets or capsules is wrong or missing, so they could be confused with another medication.",
+      "keywords" : [
+        "imprint"
+      ]
+    },
+    {
+      "explanation" : "The product changed in appearance — discoloration or crystals — which can mean it's degrading.",
+      "keywords" : [
+        "discolor",
+        "crystalli",
+        "precipitat"
+      ]
+    },
+    {
+      "explanation" : "The bottle, cartridge, or dispenser is faulty — it may leak, not seal properly, or not dispense correctly.",
+      "keywords" : [
+        "defective container",
+        "defective delivery",
+        "leak",
+        "seal",
+        "cracked",
+        "broken"
+      ]
+    },
+    {
+      "explanation" : "The manufacturer couldn't show that its process was properly controlled. Often a paperwork or process issue rather than a known problem with the product.",
+      "keywords" : [
+        "processing control",
+        "lack of assurance",
+        "lack of controls"
+      ]
+    },
+    {
+      "explanation" : "The manufacturer recalled it at the FDA's request. The FDA's page for this recall has the specific reason.",
+      "keywords" : [
+        "fda's recommendation",
+        "fda recommendation",
+        "following fda"
+      ]
+    },
+    {
+      "explanation" : "Small particles (like glass or fibers) were found in the product. Most serious for injections.",
+      "keywords" : [
+        "particulate",
+        "glass",
+        "particle",
+        "visible matter"
+      ]
+    },
+    {
+      "explanation" : "The product may be contaminated with bacteria, mold, or another microorganism.",
+      "keywords" : [
+        "sterility",
+        "non-sterile",
+        "nonsterile",
+        "microbial",
+        "contamin",
+        "mold",
+        "bacteria",
+        "burkholderia",
+        "pseudomonas"
+      ]
+    },
+    {
+      "explanation" : "Tablets may not dissolve properly, so the medication may be released too slowly or unevenly.",
+      "keywords" : [
+        "dissolution",
+        "disintegration"
+      ]
+    },
+    {
+      "explanation" : "The product may lose strength before its expiration date.",
+      "keywords" : [
+        "stability",
+        "expir",
+        "shelf life"
+      ]
+    },
+    {
+      "explanation" : "The packaging doesn't meet a safety rule — often that the cap isn't child-resistant. The medicine itself is usually unaffected.",
+      "keywords" : [
+        "child-resistant",
+        "child resistant",
+        "packaging"
+      ]
+    },
+    {
+      "explanation" : "The product was exposed to temperatures outside its safe range during storage or shipping.",
+      "keywords" : [
+        "temperature excursion",
+        "temperature",
+        "cold chain"
+      ]
+    },
+    {
+      "explanation" : "The factory broke a manufacturing or record-keeping rule. This is often about paperwork or process, not a known problem with the product itself — but the FDA recalls it to be safe.",
+      "keywords" : [
+        "cgmp",
+        "gmp",
+        "good manufacturing",
+        "manufacturing deviation",
+        "deviation"
+      ]
+    },
+    {
+      "explanation" : "The product was sold without FDA approval or outside what its approval allows.",
+      "keywords" : [
+        "unapproved",
+        "marketed without"
+      ]
+    },
+    {
+      "explanation" : "The product may be counterfeit or tampered with.",
+      "keywords" : [
+        "tamper",
+        "counterfeit"
+      ]
+    }
+  ],
+  "whatToDo" : {
+    "Class I" : "Don't take another dose until you've talked to your pharmacist — call today, or call the number on the recall. Don't throw the bottle away yet; they may want the lot number.",
+    "Class II" : "Don't stop taking it on your own. Check the lot number against your bottle, and call or visit your pharmacist — they can replace it if it's affected.",
+    "Class III" : "This kind of recall rarely affects your health. Mention it at your next refill, or ask your pharmacist if you're unsure.",
+    "Unclassified" : "Don't stop taking a medication on your own. Take your bottle to your pharmacist, or call them, and ask whether it's part of this recall and what to do next."
+  }
+}

@@ -20,7 +20,7 @@ nothing about pixels, deliberately.
 | `Core/OpenFDAClient.swift` (`RecallMatcher`) | — | `fixtures/matching/` | not started |
 | `Core/DrugIndex.swift` | — | — | not started |
 | `Core/ScanAccumulator.swift` | — | `fixtures/scanning/` | not started |
-| `Core/RecallGlossary.swift` | — | `fixtures/glossary/` | not started |
+| `Core/RecallGlossary.swift` | `core/RecallGlossary.kt` | `fixtures/glossary/` | **done** — 3 tests green |
 | `Core/MedlinePlus.swift` | — | — | not started |
 | `Core/RecallStore.swift` | — | — | not started |
 | `Core/BackgroundRefresh.swift` | — | — | not started — WorkManager, not a port |
@@ -79,6 +79,39 @@ Fix is one line — `CodingKeys` on `OpenFDA`, or `convertFromSnakeCase` on the
 decoder — but it changes matching behaviour in a shipped medical app, so it
 wants its own PR and its own review rather than riding along with a repo
 restructure.
+
+## Open question — “Lack of Assurance of Sterility”
+
+Not a bug, but worth a decision, and the glossary port is what surfaced it.
+
+The table is first-hit-wins, and the entry keyed on `lack of assurance` sits
+above the one keyed on `sterility`. So `Lack of Assurance of Sterility` gets:
+
+> The manufacturer couldn't show that its process was properly controlled.
+> Often a paperwork or process issue rather than a known problem with the
+> product.
+
+rather than:
+
+> The product may be contaminated with bacteria, mold, or another
+> microorganism.
+
+**242 of 1,000 ongoing recalls sampled on 2026-11-22 carry that exact phrase** —
+roughly a quarter of everything the app will ever show — and every one of them
+is Class II.
+
+There's a real argument for the current wording: *lack of assurance* of
+sterility means the manufacturer can't demonstrate sterility, not that
+contamination was found, so describing it as a process failure is accurate.
+The part that gives pause is the tail — “often a paperwork issue rather than a
+known problem with the product” — attached to a quarter of all recalls, some
+of which follow media fills that did grow bacteria.
+
+Options, for whoever picks this up: leave it, reorder so `sterility` wins, or
+give the phrase its own entry that says the manufacturer couldn't demonstrate
+sterility without implying paperwork. It changes wording in a shipped app, so
+it wants its own PR either way, and the glossary fixture would have to be
+re-recorded with it.
 
 ## Platform mapping
 
